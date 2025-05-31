@@ -28,7 +28,7 @@ export const handler = async (event) => {
         if (!userGroups.startsWith("[")) {
           parsedGroups = userGroups.split(" ").filter(g => g);
         } else {
-          parsedGroups = JSON.parse(userGroups.replace(/(\w+)\s+(\w+)/g, '["$1", "$2"]'));
+          parsedGroups = JSON.parse(userGroups.replace(/(\w+)\s(\w+)/g, '["$1", "$2"]'));
         }
         userGroups = Array.isArray(parsedGroups) ? parsedGroups : [userGroups];
       } catch (e) {

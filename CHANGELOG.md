@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2025-05-31
+### Changed
+- Fixed lambda logging to remove unnessesary console.log
+- Added CONTRIBUTION.md file
+
 
 ## [1.0.0] - 2025-05-11
 ### Added

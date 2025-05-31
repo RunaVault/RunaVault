@@ -32,7 +32,7 @@ export const handler = async (event) => {
       return formatResponse(400, { message: "At least one user or group must be specified for sharing" });
     }
 
-    console.log('Validated sharedWith:', validatedSharedWith);
+    console.log('Sharing directory with users:', validatedSharedWith.users.length, 'groups:', validatedSharedWith.groups.length);
 
     const queryResponse = await dynamoDB.send(new QueryCommand({
       TableName: `${TABLE_PREFIX}passwords`,
@@ -58,21 +58,21 @@ export const handler = async (event) => {
     const groupedByPasswordId = directoryItems.reduce((grouped, item) => {
       const siteValue = item.site?.S || "";
       const parts = siteValue.split('#');
-      
+
       let passwordId = item.password_id?.S || '';
-      
+
       if (!passwordId) {
         if (parts.length >= 3) {
-          passwordId = parts[parts.length - 2]; 
+          passwordId = parts[parts.length - 2];
         }
       }
-      
+
       if (!passwordId) {
         passwordId = siteValue;
       }
-      
-      console.log('Extracted passwordId:', passwordId, 'from site:', siteValue);
-      
+
+      console.log('Processing passwordId:', passwordId, 'for site:', siteValue.split('#')[0]);
+
       if (!grouped[passwordId]) {
         grouped[passwordId] = [];
       }
@@ -83,24 +83,24 @@ export const handler = async (event) => {
     for (const [passwordId, items] of Object.entries(groupedByPasswordId)) {
       const baseItem = items[0];
       const site = baseItem.site.S;
-      
-      console.log('Processing site:', site);
+
+      console.log('Processing site:', site.split('#')[0]);
       const siteParts = site.split('#');
 
       const lastPart = siteParts[siteParts.length - 1];
       let baseCompositeKey;
-      
+
       if (siteParts.length >= 3) {
         baseCompositeKey = siteParts.slice(0, -1).join('#');
       } else {
         baseCompositeKey = siteParts[0] + '#' + passwordId;
       }
-      
-      console.log('Base composite key:', baseCompositeKey);
+
+      console.log('Using base composite key for site:', siteParts[0]);
 
       let existingSharedUsers = new Set();
       let existingSharedGroups = new Set();
-      
+
       items.forEach(item => {
         if (item.shared_with_users?.S && item.shared_with_users.S !== "NONE") {
           existingSharedUsers.add(item.shared_with_users.S);
@@ -112,17 +112,15 @@ export const handler = async (event) => {
 
       const updatedSharedGroups = [...existingSharedGroups, ...(validatedSharedWith.groups || [])];
       const updatedSharedUsers = [...existingSharedUsers, ...(validatedSharedWith.users || [])];
-      
-      console.log('Existing users:', [...existingSharedUsers]);
-      console.log('Updated users:', updatedSharedUsers);
-      console.log('Existing groups:', [...existingSharedGroups]);
-      console.log('Updated groups:', updatedSharedGroups);
-      
+
+      console.log('Existing users count:', existingSharedUsers.size, 'Updated users count:', updatedSharedUsers.length);
+      console.log('Existing groups count:', existingSharedGroups.size, 'Updated groups count:', updatedSharedGroups.length);
+
       const existingItemIds = new Set(items.map(item => item.site.S));
-      
+
       try {
         const deletePromises = items.map(item => {
-          console.log('Deleting item:', item.site.S);
+          console.log('Deleting item for site:', item.site.S.split('#')[0]);
           return dynamoDB.send(
             new DeleteItemCommand({
               TableName: `${TABLE_PREFIX}passwords`,
@@ -135,7 +133,7 @@ export const handler = async (event) => {
         });
         await Promise.all(deletePromises);
       } catch (error) {
-        console.warn("Не вдалося видалити існуючі елементи. Це нормально, якщо ваша політика IAM ще не оновлена:", error.message);
+        console.warn("Failed to delete existing items. This is normal if your IAM policy is not yet updated:", error.message);
       }
 
       const baseDynamoItem = {
@@ -164,11 +162,11 @@ export const handler = async (event) => {
 
       groups.forEach((group) => {
         if (group === "NONE" && groups.length > 1) return;
-        
+
         const compositeKey = `${baseCompositeKey}#group:${group}`;
-        console.log('Creating group item with key:', compositeKey);
-        
-        const putCommand = existingItemIds.has(compositeKey) ? 
+        console.log('Creating group item for site:', baseCompositeKey.split('#')[0], 'group:', group);
+
+        const putCommand = existingItemIds.has(compositeKey) ?
           new PutItemCommand({
             TableName: `${TABLE_PREFIX}passwords`,
             Item: {
@@ -188,17 +186,17 @@ export const handler = async (event) => {
             },
             ConditionExpression: "attribute_not_exists(user_id) AND attribute_not_exists(site)"
           });
-          
+
         putPromises.push(
           dynamoDB.send(putCommand)
             .then(() => {
-              console.log('Successfully created/updated group item:', compositeKey);
+              console.log('Successfully created/updated group item for site:', baseCompositeKey.split('#')[0]);
             }).catch(err => {
               if (err.name === "ConditionalCheckFailedException") {
-                console.log("Запис уже існує, пропускаємо:", compositeKey);
+                console.log("Record already exists, skipping for site:", baseCompositeKey.split('#')[0]);
                 return;
               }
-              console.error('Error creating group item:', compositeKey, err);
+              console.error('Error creating group item for site:', baseCompositeKey.split('#')[0], err.message);
               throw err;
             })
         );
@@ -206,11 +204,11 @@ export const handler = async (event) => {
 
       users.forEach((user) => {
         if (user === "NONE" && users.length > 1) return;
-        
+
         const compositeKey = `${baseCompositeKey}#user:${user}`;
-        console.log('Creating user item with key:', compositeKey);
-        
-        const putCommand = existingItemIds.has(compositeKey) ? 
+        console.log('Creating user item for site:', baseCompositeKey.split('#')[0], 'user:', user);
+
+        const putCommand = existingItemIds.has(compositeKey) ?
           new PutItemCommand({
             TableName: `${TABLE_PREFIX}passwords`,
             Item: {
@@ -230,17 +228,17 @@ export const handler = async (event) => {
             },
             ConditionExpression: "attribute_not_exists(user_id) AND attribute_not_exists(site)"
           });
-          
+
         putPromises.push(
           dynamoDB.send(putCommand)
             .then(() => {
-              console.log('Successfully created/updated user item:', compositeKey);
+              console.log('Successfully created/updated user item for site:', baseCompositeKey.split('#')[0]);
             }).catch(err => {
               if (err.name === "ConditionalCheckFailedException") {
-                console.log("Запис уже існує, пропускаємо:", compositeKey);
+                console.log("Record already exists, skipping for site:", baseCompositeKey.split('#')[0]);
                 return;
               }
-              console.error('Error creating user item:', compositeKey, err);
+              console.error('Error creating user item for site:', baseCompositeKey.split('#')[0], err.message);
               throw err;
             })
         );
@@ -250,7 +248,7 @@ export const handler = async (event) => {
         await Promise.all(putPromises);
         console.log('All items created successfully for passwordId:', passwordId);
       } catch (error) {
-        console.error('Error creating items for passwordId:', passwordId, error);
+        console.error('Error creating items for passwordId:', passwordId, error.message);
         throw error;
       }
 
@@ -273,7 +271,7 @@ export const handler = async (event) => {
       });
     }
 
-    console.log('All directories shared successfully. Updated secrets:', updatedSecrets);
+    console.log('Directory sharing completed successfully. Total secrets processed:', updatedSecrets.length);
 
     return formatResponse(200, {
       message: "Directory shared successfully",
@@ -281,7 +279,7 @@ export const handler = async (event) => {
     });
 
   } catch (error) {
-    console.error("Error in share_directory:", error);
+    console.error("Error in share_directory:", error.message);
     const statusCode = error.message.includes("Unauthorized") ? 401 :
       error.message.includes("not found") ? 404 : 500;
     return formatResponse(statusCode, {
