@@ -163,7 +163,8 @@ RunaVault is licensed under the GNU GPL License - see the [LICENSE](LICENSE) fil
 
 This project is open-source and maintained in my free time. If you find it useful, consider supporting its development:
 
-- [Donate via GitHub Sponsors (TBA)](TBA)
+- [Donate via GitHub Sponsors](https://github.com/sponsors/tokarev-artem)
 - [Buy Me a Coffee](https://buymeacoffee.com/tokarevartem)
+- [Paypal](https://www.paypal.me/ArtemiyTokarev)
 
 Your support helps keep the project active and maintained. Thank you!
