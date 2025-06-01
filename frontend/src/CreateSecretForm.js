@@ -33,8 +33,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
   const MAX_SITE_LENGTH = 200;
   const MAX_USERNAME_LENGTH = 100;
   const MAX_SUBDIRECTORY_LENGTH = 500;
-  const MIN_PASSWORD_LENGTH =50;
-
+  const MIN_PASSWORD_LENGTH = 50;
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -142,6 +141,18 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
         shareWithGroups.map(group => group.value)
       );
 
+      let passwordPayload;
+      if (typeof encryptedData === 'string') {
+        try {
+          passwordPayload = JSON.parse(encryptedData);
+        } catch (parseError) {
+          console.error('Failed to parse encrypted data:', parseError);
+          passwordPayload = encryptedData;
+        }
+      } else {
+        passwordPayload = encryptedData;
+      }
+
       const response = await fetch(
         `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}create_secret`,
         {
@@ -153,7 +164,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
           body: JSON.stringify({
             site,
             username,
-            password: encryptedData,
+            password: passwordPayload,
             encrypted: true,
             subdirectory,
             notes,
@@ -408,7 +419,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
               <input
                 type="text"
                 id="subdirectory"
-                maxlength="50"
+                maxLength="50"
                 value={subdirectory}
                 onChange={(e) => setSubdirectory(e.target.value)}
                 placeholder="e.g., project1"
@@ -443,7 +454,6 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
             maxLength={MAX_SUBDIRECTORY_LENGTH}
           />
         </div>
-
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? "Creating..." : "Create Secret"}
