@@ -48,6 +48,8 @@ jest.mock('jwks-rsa', () => ({
 // Import the module we're testing
 let utils;
 
+const MOCK_JWT_WITH_KID = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2lkIn0.eyJzdWIiOiJ0ZXN0LXVzZXIifQ.dummySignature";
+
 describe('Utils Module', () => {
   beforeAll(async () => {
     // Import the module after mocks are set up
@@ -76,12 +78,12 @@ describe('Utils Module', () => {
       mockVerifyFn.mockReturnValue(mockDecodedToken);
 
       // Call verifyToken
-      const result = await utils.verifyToken('valid-token');
+      const result = await utils.verifyToken(MOCK_JWT_WITH_KID);
 
       // Verify results
-      expect(mockDecodeFn).toHaveBeenCalledWith('valid-token', { complete: true });
+      expect(mockDecodeFn).toHaveBeenCalledWith(MOCK_JWT_WITH_KID, { complete: true });
       expect(mockClientGetSigningKeyFn).toHaveBeenCalledWith('test-kid', expect.any(Function));
-      expect(mockVerifyFn).toHaveBeenCalledWith('valid-token', 'test-public-key', { algorithms: ['RS256'] });
+      expect(mockVerifyFn).toHaveBeenCalledWith(MOCK_JWT_WITH_KID, 'test-public-key', { algorithms: ['RS256'] });
       expect(result).toEqual(mockDecodedToken);
     });
 
@@ -117,7 +119,7 @@ describe('Utils Module', () => {
       });
 
       // Call verifyToken and expect it to reject
-      await expect(utils.verifyToken('valid-token')).rejects.toThrow('Failed to get signing key');
+      await expect(utils.verifyToken(MOCK_JWT_WITH_KID)).rejects.toThrow('Failed to get signing key');
       expect(mockClientGetSigningKeyFn).toHaveBeenCalledWith('test-kid', expect.any(Function));
     });
 
@@ -138,7 +140,7 @@ describe('Utils Module', () => {
       });
 
       // Call verifyToken and expect it to reject
-      await expect(utils.verifyToken('valid-token')).rejects.toThrow('Token verification failed');
+      await expect(utils.verifyToken(MOCK_JWT_WITH_KID)).rejects.toThrow('Token verification failed');
       expect(mockClientGetSigningKeyFn).toHaveBeenCalledWith('test-kid', expect.any(Function));
     });
   });

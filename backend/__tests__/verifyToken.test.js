@@ -46,6 +46,8 @@ jest.mock('jwks-rsa', () => ({
 // Import the module we're testing
 let utils;
 
+const MOCK_JWT_WITH_KID = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2lkIn0.eyJzdWIiOiJ0ZXN0LXVzZXIifQ.dummySignature";
+
 describe('verifyToken', () => {
   beforeAll(async () => {
     // Import the module after mocks are set up
@@ -73,11 +75,11 @@ describe('verifyToken', () => {
     mockVerifyFn.mockReturnValue(mockDecodedToken);
 
     // Call verifyToken
-    const result = await utils.verifyToken('valid-token');
+    const result = await utils.verifyToken(MOCK_JWT_WITH_KID);
 
     // Verify results
-    expect(mockDecodeFn).toHaveBeenCalledWith('valid-token', { complete: true });
-    expect(mockVerifyFn).toHaveBeenCalledWith('valid-token', 'test-public-key', { algorithms: ['RS256'] });
+    expect(mockDecodeFn).toHaveBeenCalledWith(MOCK_JWT_WITH_KID, { complete: true });
+    expect(mockVerifyFn).toHaveBeenCalledWith(MOCK_JWT_WITH_KID, 'test-public-key', { algorithms: ['RS256'] });
     expect(result).toEqual(mockDecodedToken);
   });
 
@@ -113,7 +115,7 @@ describe('verifyToken', () => {
     });
 
     // Call verifyToken and expect it to reject
-    await expect(utils.verifyToken('valid-token')).rejects.toThrow('Failed to get signing key');
+    await expect(utils.verifyToken(MOCK_JWT_WITH_KID)).rejects.toThrow('Failed to get signing key');
   });
 
   it('should reject if JWT verification fails', async () => {
@@ -133,6 +135,6 @@ describe('verifyToken', () => {
     });
 
     // Call verifyToken and expect it to reject
-    await expect(utils.verifyToken('valid-token')).rejects.toThrow('Token verification failed');
+    await expect(utils.verifyToken(MOCK_JWT_WITH_KID)).rejects.toThrow('Token verification failed');
   });
 });
