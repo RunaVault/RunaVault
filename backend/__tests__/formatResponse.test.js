@@ -34,8 +34,7 @@ describe('formatResponse', () => {
       body: JSON.stringify({ message: 'Success' }),
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Credentials': true
+        'Access-Control-Allow-Origin': '*'
       }
     });
   });
@@ -49,7 +48,6 @@ describe('formatResponse', () => {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Credentials': true,
         'Custom-Header': 'Value'
       }
     });

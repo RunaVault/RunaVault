@@ -150,7 +150,6 @@ describe('Utils Module', () => {
         statusCode: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ message: 'Success' })
@@ -164,7 +163,6 @@ describe('Utils Module', () => {
         statusCode: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true,
           'Content-Type': 'application/json',
           'X-Custom-Header': 'value'
         },
