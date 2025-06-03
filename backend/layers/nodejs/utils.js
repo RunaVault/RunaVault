@@ -24,6 +24,7 @@ export function formatResponse(statusCode, body, headers = {}) {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Credentials": true,
       ...headers,
     },
   };
