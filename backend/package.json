@@ -14,10 +14,10 @@
     "@babel/preset-env": "^7.22.20",
     "@types/jest": "^29.5.11",
     "babel-jest": "^29.6.3",
-    "jest": "^29.7.0"
-  },
-  "type": "module",
-  "dependencies": {
+    "jest": "^29.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.821.0"
-  }
+  },
+  "type": "module"
 }
