@@ -12,6 +12,11 @@ module.exports = {
   testEnvironmentOptions: {
     NODE_ENV: 'test'
   },
+  // Add these lines for coverage:
+  collectCoverage: true,
+  coverageDirectory: 'coverage', // This will be backend/coverage/
+  coverageReporters: ['json', 'lcov', 'text', 'clover'], // lcov is important for Codecov
+
   // Set timeout for tests to avoid hanging
   testTimeout: 10000,
   // Force exit after tests complete
