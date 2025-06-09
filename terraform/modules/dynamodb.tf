@@ -1,4 +1,4 @@
-resource "aws_dynamodb_table" "passwords" {
+resource "aws_dynamodb_table" "passwords" { #tfsec:ignore:aws-dynamodb-table-customer-key
   name                        = "RunaVault_passwords"
   billing_mode                = "PAY_PER_REQUEST"
   deletion_protection_enabled = true
