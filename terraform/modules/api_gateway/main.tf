@@ -58,6 +58,19 @@ resource "aws_apigatewayv2_stage" "stage" {
   api_id      = aws_apigatewayv2_api.api.id
   name        = var.stage_name
   auto_deploy = true
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw_logs.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+    })
+  }
 }
 
 resource "aws_apigatewayv2_domain_name" "this" {
@@ -68,6 +81,11 @@ resource "aws_apigatewayv2_domain_name" "this" {
     endpoint_type   = "REGIONAL"
     security_policy = "TLS_1_2"
   }
+}
+
+resource "aws_cloudwatch_log_group" "api_gw_logs" { #tfsec:ignore:aws-cloudwatch-log-group-customer-key
+  name              = "/aws/apigateway/${var.api_name}-${var.stage_name}"
+  retention_in_days = 30
 }
 
 resource "aws_apigatewayv2_api_mapping" "this" {

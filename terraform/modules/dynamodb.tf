@@ -2,7 +2,10 @@ resource "aws_dynamodb_table" "passwords" {
   name                        = "RunaVault_passwords"
   billing_mode                = "PAY_PER_REQUEST"
   deletion_protection_enabled = true
-
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.aws_kms_key.arn
+  }
   hash_key  = "user_id"
   range_key = "site"
 
