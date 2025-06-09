@@ -3,7 +3,7 @@ resource "aws_dynamodb_table" "passwords" {
   billing_mode                = "PAY_PER_REQUEST"
   deletion_protection_enabled = true
   server_side_encryption {
-    enabled     = true
+    enabled = true
   }
   hash_key  = "user_id"
   range_key = "site"
