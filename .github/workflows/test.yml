@@ -1,0 +1,57 @@
+name: CI Tests
+
+on:
+  push:
+    branches: [ node-tests, main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    name: Backend Tests
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm install
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test
+    # - name: Upload backend coverage to Codecov
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     directory: ./backend/coverage
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     fail_ci_if_error: true # Optional: fail CI if Codecov upload fails
+
+  # frontend-test:
+  #   runs-on: ubuntu-latest
+  #   name: Frontend Tests # Descriptive name for the job
+
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Set up Node.js
+  #     uses: actions/setup-node@v4
+  #     with:
+  #       node-version: '20'
+  #   - name: Install frontend dependencies
+  #     working-directory: ./frontend # Use working-directory for cleaner steps
+  #     run: npm install
+  #   - name: Run frontend tests
+  #     working-directory: ./frontend
+  #     run: npm test
+    # Optional: Add Codecov for frontend if coverage is set up
+    # - name: Upload frontend coverage to Codecov
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     directory: ./frontend/coverage
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     fail_ci_if_error: true
