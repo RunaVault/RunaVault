@@ -1,3 +1,7 @@
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=RunaVault_RunaVault&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=RunaVault_RunaVault)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=RunaVault_RunaVault&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=RunaVault_RunaVault)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=RunaVault_RunaVault&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=RunaVault_RunaVault)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=RunaVault_RunaVault&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=RunaVault_RunaVault)
 # RunaVault
 
 RunaVault is a secure, serverless password management application built using AWS free-tier services and a React frontend. It enables users to create, manage, and share encrypted secrets (e.g., passwords) with individuals or groups, leveraging AWS Cognito for authentication, DynamoDB for storage, and KMS for encryption.
