@@ -123,29 +123,39 @@ RunaVault's backend is designed to operate within AWS's free tier, making it cos
 - All users must enable Multi-Factor Authentication (MFA) as part of the Cognito signup flow, adding an extra layer of protection beyond username and password.
 
 
+Below is the updated README section for your project's approximate costs, reflecting the AWS Free Tier changes effective July 15, 2025. The update accounts for the new 6-month credit-based Free Plan for new accounts, the unchanged always-free services, and the legacy 12-month Free Tier for accounts created before July 15, 2025. Costs are adjusted based on the provided example usage, and the structure mirrors your original format for consistency. All prices are in USD, based on the US East (N. Virginia) region as of July 2025, with a note to check current rates.
+
+
+
 ## Approximate Costs
 
-RunaVault leverages AWS free-tier services where possible. Below are approximate costs based on minimal usage, assuming you stay within the free tier initially and scale slightly beyond it. Costs are in USD and based on the US East (N. Virginia) region as of April 2025; check [AWS Pricing](https://aws.amazon.com/pricing/) for current rates.
+RunaVault leverages AWS Free Tier services where possible. Below are approximate costs based on minimal usage, assuming you stay within the free tier initially and scale slightly beyond it. Costs are in USD, based on the US East (N. Virginia) region as of July 2025; check [AWS Pricing](https://aws.amazon.com/pricing/) for current rates.
 
-| **Service**       | **Free Tier**                          | **Beyond Free Tier (Example Usage)**             | **Approx. Monthly Cost** |
-|--------------------|----------------------------------------|--------------------------------------------------|--------------------------|
-| **Lambda**        | 1M requests, 3.2M seconds (128 MB)    | 1.5M requests, 4M seconds: $0.30 + $0.80         | $1.10                   |
-| **DynamoDB**      | 25 GB storage, 25 WCUs/RCUs           | 30 GB, 30 WCUs/RCUs: $1.25 + $0.14              | $1.39                   |
-| **Cognito**       | 50,000 MAUs (first 12 months)          | 100 MAUs: Free (within free tier)               | $0.00                   |
-| **CloudFront**    | 1 TB data transfer, 10M requests       | 1.2 TB, 12M requests: $0.02 + $0.01             | $0.03                   |
-| **S3**            | 5 GB storage, 20,000 GET, 2,000 PUT    | 10 GB, 25k GET, 3k PUT: $0.23 + $0.02 + $0.01   | $0.26                   |
-| **ACM**           | Free for public certificates           | No additional cost                              | $0.00                   |
-| **Route 53**      | $0.50 per hosted zone/month (first not free) | 1 hosted zone, 1M queries: $0.50 + $0.40    | $0.90                   |
-| **API Gateway**   | 1M REST API calls (first 12 months)    | 1.5M calls: $1.75                               | $1.75                   |
-| **KMS (Key Storage)** | 1 customer-managed key: $1.00         | 1 customer-managed key: $1.00                   | $1.00                   |
-| **KMS (API Requests)** | 20,000 requests/month              | 25,000 requests: $0.15                          | $0.15  
+For accounts created **on or after July 15, 2025**, the AWS Free Tier provides **$100 in credits** for 6 months (up to $200 with activity-based bonuses), covering usage across eligible services. Accounts created **before July 15, 2025** remain under the legacy 12-month Free Tier. Always-free services (e.g., Lambda, DynamoDB, S3) apply to both new and legacy accounts with monthly limits.
 
-- **Total Free Tier Cost**: $0.00/month (first 12 months, within limits).
-- **Total Beyond Free Tier**: ~$5.43/month (example usage above).
+| **Service**       | **Free Tier (Always-Free or Credits)** | **Beyond Free Tier (Example Usage)**             | **Approx. Monthly Cost** |
+|--------------------|---------------------------------------|--------------------------------------------------|--------------------------|
+| **Lambda**        | 1M requests, 3.2M seconds (128 MB) always-free | 1.5M requests, 4M seconds: $0.30 + $0.80         | $1.10                   |
+| **DynamoDB**      | 25 GB storage, 25 WCUs/RCUs always-free | 30 GB, 30 WCUs/RCUs: $1.25 + $0.14              | $1.39                   |
+| **Cognito**       | 50,000 MAUs (6 months, credits)       | 100 MAUs: Free (within free tier)               | $0.00                   |
+| **CloudFront**    | 1 TB data transfer, 10M requests always-free | 1.2 TB, 12M requests: $0.02 + $0.01             | $0.03                   |
+| **S3**            | 5 GB storage, 20,000 GET, 2,000 PUT always-free | 10 GB, 25k GET, 3k PUT: $0.23 + $0.02 + $0.01   | $0.26                   |
+| **ACM**           | Free for public certificates          | No additional cost                              | $0.00                   |
+| **Route 53**      | $0.50 per hosted zone/month (credits, not always-free) | 1 hosted zone, 1M queries: $0.50 + $0.40    | $0.90                   |
+| **API Gateway**   | 1M REST API calls (6 months, credits) | 1.5M calls: $1.75                               | $1.75                   |
+| **KMS (Key Storage)** | 1 customer-managed key: $1.00 (credits) | 1 customer-managed key: $1.00                   | $1.00                   |
+| **KMS (API Requests)** | 20,000 requests/month (credits)   | 25,000 requests: $0.15                          | $0.15                   |
+
+- **Total Free Tier Cost**: $0.00/month (within always-free limits or 6-month credits for new accounts; 12 months for legacy accounts).
+- **Total Beyond Free Tier**: ~$5.43/month (example usage above, after credits or always-free limits are exhausted).
 - **Notes**:
+  - For new accounts (post-July 15, 2025), usage is free until **$100-$200 in credits** are depleted or 6 months elapse (Free Plan). Upgrade to a Paid Plan for continued use or to access restricted services (e.g., AWS Marketplace).
+  - Always-free services (Lambda, DynamoDB, S3, CloudFront) have monthly limits and apply to all accounts.
   - Costs scale with usage (e.g., more users, requests, or storage).
   - KMS costs are minimal (~$0.03 per 10,000 requests) and often negligible for small-scale use.
   - Route 53 assumes a custom domain; skip this cost if using default AWS domains.
+  - Monitor usage via the AWS Billing and Cost Management Console or AWS Budgets to stay within credits or free limits.
+
 
 ## Contributing
 
