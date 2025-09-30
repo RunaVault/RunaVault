@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2025-09-30
+### Changed
+- Fixed sonar findings
+- Updated vulnerable packages in package-lock.json
+- Added terraform CI tests
+
 ## [1.0.1] - 2025-06-01
 ### Changed
 - Fixed lambda logging to remove unnessesary console.log
