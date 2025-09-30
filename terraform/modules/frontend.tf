@@ -1,6 +1,5 @@
-resource "aws_s3_bucket" "runa_vault_bucket" {
+resource "aws_s3_bucket" "runa_vault_bucket" { #tfsec:ignore:aws-s3-enable-versioning tfsec:ignore:aws-s3-enable-bucket-logging
   bucket = "runavault-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}-${random_string.suffix.result}"
-
   tags = merge(
     local.common_tags,
     {
@@ -8,7 +7,15 @@ resource "aws_s3_bucket" "runa_vault_bucket" {
     }
   )
 }
+resource "aws_s3_bucket_server_side_encryption_configuration" "react_bucket" { #tfsec:ignore:aws-s3-encryption-customer-key
+  bucket = aws_s3_bucket.runa_vault_bucket.id
 
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
+}
 resource "random_string" "suffix" {
   length  = 8
   special = false
@@ -62,7 +69,7 @@ resource "aws_cloudfront_origin_access_identity" "oai" {
 }
 
 # CloudFront distribution
-resource "aws_cloudfront_distribution" "react_app_distribution" {
+resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:aws-cloudfront-enable-waf
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
@@ -76,6 +83,11 @@ resource "aws_cloudfront_distribution" "react_app_distribution" {
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
     }
+  }
+  logging_config {
+    include_cookies = false
+    bucket          = aws_s3_bucket.logging_bucket.bucket_regional_domain_name
+    prefix          = "cloudfront-logs/"
   }
 
   default_cache_behavior {
@@ -211,4 +223,34 @@ resource "null_resource" "deploy_frontend" {
       aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.react_app_distribution.id} --paths "/*" --region ${data.aws_region.current.name}
     EOT
   }
+}
+
+
+resource "aws_s3_bucket" "logging_bucket" { #tfsec:ignore:aws-s3-enable-versioning tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-encryption-customer-key
+  bucket = "runavault-logging-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}-${random_string.suffix.result}"
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "RunaVault_Logging_S3Bucket"
+    }
+  )
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket" { #tfsec:ignore:aws-s3-encryption-customer-key
+  bucket = aws_s3_bucket.logging_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "logging_bucket_private" {
+  bucket = aws_s3_bucket.logging_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }

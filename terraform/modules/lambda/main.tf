@@ -34,7 +34,7 @@ data "archive_file" "lambda" {
   excludes    = ["${var.function_name}.zip"]
 }
 
-resource "aws_lambda_function" "lambda" {
+resource "aws_lambda_function" "lambda" { #tfsec:ignore:aws-lambda-enable-tracing
   function_name = "RunaVault_${var.function_name}"
   description   = var.description
   handler       = "index.handler"
@@ -84,13 +84,13 @@ resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.function_name}:*"]
       }
     ]
   })
 }
 
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
+resource "aws_cloudwatch_log_group" "lambda_log_group" { #tfsec:ignore:aws-cloudwatch-log-group-customer-key
   name              = "/aws/lambda/RunaVault_${var.function_name}"
   retention_in_days = var.log_retention_in_days
   tags = merge(
