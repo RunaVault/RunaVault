@@ -246,9 +246,9 @@ export const handler = async (event) => {
 
       try {
         await Promise.all(putPromises);
-        console.log('All items created successfully for passwordId:', passwordId);
+        console.log('All items created successfully for a password.');
       } catch (error) {
-        console.error('Error creating items for passwordId:', passwordId, error.message);
+        console.error('Error creating items for a password. Error message:', error.message);
         throw error;
       }
 
