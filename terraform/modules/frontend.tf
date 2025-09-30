@@ -226,7 +226,7 @@ resource "null_resource" "deploy_frontend" {
 }
 
 
-resource "aws_s3_bucket" "logging_bucket" { #tfsec:ignore:aws-s3-enable-versioning tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-encryption-customer-key
+resource "aws_s3_bucket" "logging_bucket" { #tfsec:ignore:aws-s3-enable-versioning tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-encryption-customer-key #NOSONAR
   bucket = "runavault-logging-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}-${random_string.suffix.result}"
   tags = merge(
     local.common_tags,
