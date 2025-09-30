@@ -22,5 +22,5 @@ jobs:
           args: >
             -Dsonar.projectKey=runavault_RunaVault
             -Dsonar.organization=runavault
-            -Dsonar.test.exclusions=__tests__/**
+            -Dsonar.test.exclusions=**/__tests__/**
             -Dsonar.verbose=true
