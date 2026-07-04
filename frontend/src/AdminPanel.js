@@ -36,14 +36,15 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     if (cache.current[username]) return cache.current[username];
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_user_groups`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_user_groups?username=${encodeURIComponent(username)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       if (!response.ok) throw new Error("Failed to fetch user groups");
       const data = await response.json();
       cache.current[username] = data.groups;
@@ -56,14 +57,15 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
 
   const fetchAllUserGroups = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_user_groups`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ listAllUsers: true }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_user_groups?listAllUsers=true`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       if (!response.ok) throw new Error("Failed to fetch users and groups");
       const data = await response.json();
       
@@ -368,7 +370,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       
       if (userAttributesProvided) {
         const updateResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_users`, {
-          method: "POST",
+          method: "PUT",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ 
             username: editUser.value, 
@@ -404,7 +406,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       
       if (editUser.groupsToRemove.length > 0) {
         const removeResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}remove_user_from_groups`, {
-          method: "POST",
+          method: "DELETE",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ username: editUser.value, groups: editUser.groupsToRemove.map(g => g.value) }),
         });
@@ -449,7 +451,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     setSuccess(null);
     try {
       const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_users`, {
-        method: "POST",
+        method: "PUT",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ username: deleteUserConfirm.value, deleteUser: true }),
       });
@@ -482,7 +484,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     setSuccess(null);
     try {
       const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}delete_group`, {
-        method: "POST",
+        method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ groupName: deleteGroupConfirm.value }),
       });

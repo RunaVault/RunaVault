@@ -592,7 +592,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       const response = await fetch(
         `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}delete_secret`,
         {
-          method: "POST",
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -691,7 +691,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       const response = await fetch(
         `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_secret`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
@@ -772,7 +772,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       const response = await fetch(
         `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_secret`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",

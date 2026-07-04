@@ -2478,3 +2478,45 @@ table.table.table-bordered.table-fixed {
     white-space: nowrap;
     margin-bottom: -6px;
 }
+
+/* Password strength indicator */
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-strength-bar {
+  flex: 1;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.password-strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-1 { background-color: #e53935; }
+.strength-2 { background-color: #ffa500; }
+.strength-3 { background-color: #4caf50; }
+.strength-4 { background-color: #0366d6; }
+
+.password-strength-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  min-width: 44px;
+  text-align: right;
+}
+
+.strength-label-1 { color: #e53935; }
+.strength-label-2 { color: #ffa500; }
+.strength-label-3 { color: #4caf50; }
+.strength-label-4 { color: #0366d6; }
+
+.dark-mode .password-strength-bar {
+  background-color: #27272a;
+}

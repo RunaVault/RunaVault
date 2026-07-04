@@ -15,7 +15,8 @@ module "edit_users_function" {
           "cognito-idp:AdminUpdateUserAttributes",
           "cognito-idp:AdminResetUserPassword",
           "cognito-idp:AdminDeleteUser",
-          "cognito-idp:AdminSetUserPassword"
+          "cognito-idp:AdminSetUserPassword",
+          "cognito-idp:AdminGetUser"
         ]
         Resource = [
           "arn:aws:cognito-idp:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:userpool/${aws_cognito_user_pool.main.id}"
