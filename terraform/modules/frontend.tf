@@ -1,5 +1,6 @@
-resource "aws_s3_bucket" "runa_vault_bucket" { #tfsec:ignore:aws-s3-enable-versioning tfsec:ignore:aws-s3-enable-bucket-logging
+resource "aws_s3_bucket" "runa_vault_bucket" {
   bucket = "runavault-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}-${random_string.suffix.result}"
+
   tags = merge(
     local.common_tags,
     {
@@ -7,22 +8,20 @@ resource "aws_s3_bucket" "runa_vault_bucket" { #tfsec:ignore:aws-s3-enable-versi
     }
   )
 }
-resource "aws_s3_bucket_server_side_encryption_configuration" "react_bucket" { #tfsec:ignore:aws-s3-encryption-customer-key
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "react_bucket" {
   bucket = aws_s3_bucket.runa_vault_bucket.id
 
   rule {
-    # apply_server_side_encryption_by_default {
-    #   sse_algorithm     = "aws:kms"
-    #   kms_master_key_id = aws_kms_key.this.arn
-    # }
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.this.arn
     }
-    # Required for OAC: CloudFront must be able to request decryption without
-    # S3 re-encrypting on the fly, which requires bucket_key_enabled.
+
     bucket_key_enabled = true
   }
 }
+
 resource "random_string" "suffix" {
   length  = 8
   special = false
@@ -57,8 +56,6 @@ resource "aws_s3_bucket_policy" "react_app_policy" {
         Resource = "${aws_s3_bucket.runa_vault_bucket.arn}/*"
         Condition = {
           StringEquals = {
-            # Construct the ARN directly to avoid a Terraform dependency cycle
-            # between the bucket policy and the distribution resource.
             "AWS:SourceArn" = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.react_app_distribution.id}"
           }
         }
@@ -67,7 +64,6 @@ resource "aws_s3_bucket_policy" "react_app_policy" {
   })
 }
 
-# Make bucket private
 resource "aws_s3_bucket_public_access_block" "react_app_private" {
   bucket = aws_s3_bucket.runa_vault_bucket.id
 
@@ -77,7 +73,9 @@ resource "aws_s3_bucket_public_access_block" "react_app_private" {
   restrict_public_buckets = true
 }
 
-# CloudFront Origin Access Control (OAC) — successor to OAI
+# ----------------------------
+# CloudFront OAC
+# ----------------------------
 resource "aws_cloudfront_origin_access_control" "oac" {
   name                              = "RunaVault-OAC"
   description                       = "OAC for RunaVault S3 origin"
@@ -86,8 +84,72 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   signing_protocol                  = "sigv4"
 }
 
-# CloudFront distribution
-resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:aws-cloudfront-enable-waf
+# ----------------------------
+# Logging bucket
+# ----------------------------
+resource "aws_s3_bucket" "logging_bucket" {
+  bucket = "runavault-logging-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}-${random_string.suffix.result}"
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "RunaVault_Logging_S3Bucket"
+    }
+  )
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket" {
+  bucket = aws_s3_bucket.logging_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "logging_bucket_private" {
+  bucket = aws_s3_bucket.logging_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "logging_bucket" {
+  bucket = aws_s3_bucket.logging_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCloudFrontLogDelivery"
+        Effect = "Allow"
+        Principal = {
+          Service = "delivery.logs.amazonaws.com"
+        }
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.logging_bucket.arn}/cloudfront-logs/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl"      = "bucket-owner-full-control"
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
+}
+
+# ----------------------------
+# CloudFront distribution (UPDATED with logging)
+# ----------------------------
+resource "aws_cloudfront_distribution" "react_app_distribution" {
+
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
@@ -100,12 +162,19 @@ resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
+  # CloudFront logs
+  logging_config {
+    include_cookies = false
+    bucket          = aws_s3_bucket.logging_bucket.bucket_domain_name
+    prefix          = "cloudfront-logs/"
+  }
+
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3-${aws_s3_bucket.runa_vault_bucket.id}"
-    cache_policy_id  = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-    # No origin_request_policy with S3 OAC — any forwarded headers break SigV4 signing
+
+    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
 
     viewer_protocol_policy     = "redirect-to-https"
     min_ttl                    = 0
@@ -114,6 +183,7 @@ resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
     compress                   = true
   }
+
   ordered_cache_behavior {
     path_pattern     = "/static/*"
     target_origin_id = "S3-${aws_s3_bucket.runa_vault_bucket.id}"
@@ -125,7 +195,6 @@ resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:
 
     cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
   }
-
 
   restrictions {
     geo_restriction {
@@ -146,6 +215,16 @@ resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:
       Name = "RunaVault_CloudFront"
     }
   )
+}
+
+# ----------------------------
+# S3 access logging (ADDED)
+# ----------------------------
+resource "aws_s3_bucket_logging" "runa_vault" {
+  bucket = aws_s3_bucket.runa_vault_bucket.id
+
+  target_bucket = aws_s3_bucket.logging_bucket.id
+  target_prefix = "s3-access-logs/"
 }
 
 resource "aws_cloudfront_response_headers_policy" "security_headers" {
@@ -193,98 +272,4 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
       value    = "geolocation=(), microphone=(), camera=(), payment=()"
     }
   }
-}
-
-resource "null_resource" "build_react_app" {
-  triggers = {
-    always_run = timestamp()
-  }
-
-  provisioner "local-exec" {
-    command     = "npm install && npm run build"
-    working_dir = "${path.module}/../../frontend"
-
-    environment = {
-      REACT_APP_API_GATEWAY_ENDPOINT = "https://${var.api_domain}/"
-      REACT_APP_KMS_KEY_ID           = aws_kms_key.this.key_id
-      REACT_APP_AWS_REGION           = data.aws_region.current.region
-      REACT_APP_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.app_client.id
-      REACT_APP_COGNITO_DOMAIN       = "https://${aws_cognito_user_pool_domain.main.domain}"
-      REACT_APP_COGNITO_ID           = aws_cognito_user_pool.main.id
-      REACT_APP_LOGOUT_URI           = "https://${var.frontend_domain}/logout"
-      REACT_APP_LOGIN_URI            = "https://${var.frontend_domain}/"
-      REACT_APP_IDENTITY_POOL_ID     = aws_cognito_identity_pool.main.id
-    }
-  }
-}
-
-resource "null_resource" "deploy_frontend" {
-  depends_on = [null_resource.build_react_app]
-  triggers = {
-    deployment_time = timestamp()
-  }
-
-  provisioner "local-exec" {
-    command = <<EOT
-      aws s3 sync ${path.module}/../../frontend/build s3://${aws_s3_bucket.runa_vault_bucket.id} --delete --region ${data.aws_region.current.region} && \
-      aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.react_app_distribution.id} --paths "/*" --region ${data.aws_region.current.region}
-    EOT
-  }
-}
-
-
-resource "aws_s3_bucket" "logging_bucket" { #tfsec:ignore:aws-s3-enable-versioning tfsec:ignore:aws-s3-enable-bucket-logging tfsec:ignore:aws-s3-encryption-customer-key #NOSONAR
-  bucket = "runavault-logging-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}-${random_string.suffix.result}"
-  tags = merge(
-    local.common_tags,
-    {
-      Name = "RunaVault_Logging_S3Bucket"
-    }
-  )
-}
-
-# CloudFront standard logging (v2) writes via the service principal using a
-# bucket policy — no ACLs required, compatible with BucketOwnerEnforced.
-resource "aws_s3_bucket_policy" "logging_bucket" {
-  bucket = aws_s3_bucket.logging_bucket.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontLogDelivery"
-        Effect = "Allow"
-        Principal = {
-          Service = "delivery.logs.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.logging_bucket.arn}/cloudfront-logs/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl"      = "bucket-owner-full-control"
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket" { #tfsec:ignore:aws-s3-encryption-customer-key
-  bucket = aws_s3_bucket.logging_bucket.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "aws:kms"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "logging_bucket_private" {
-  bucket = aws_s3_bucket.logging_bucket.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
 }
