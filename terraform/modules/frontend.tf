@@ -101,10 +101,10 @@ resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:
   }
 
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${aws_s3_bucket.runa_vault_bucket.id}"
-    cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.runa_vault_bucket.id}"
+    cache_policy_id  = "658327ea-f89d-4fab-a63d-7e88639e58f6"
     # No origin_request_policy with S3 OAC — any forwarded headers break SigV4 signing
 
     viewer_protocol_policy     = "redirect-to-https"
