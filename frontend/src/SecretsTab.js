@@ -590,7 +590,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     setIsDeleting(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}delete_secret`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}delete_secret`,
         {
           method: "DELETE",
           headers: {
@@ -689,7 +689,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     }
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_secret`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}edit_secret`,
         {
           method: "PUT",
           headers: {
@@ -770,7 +770,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                                     editSubdirectory !== editSecret.subdirectory;
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_secret`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}edit_secret`,
         {
           method: "PUT",
           headers: {
@@ -970,7 +970,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       });
       
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}share_directory`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}share_directory`,
         {
           method: "POST",
           headers: {

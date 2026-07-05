@@ -256,15 +256,15 @@ resource "null_resource" "build_react_app" {
     working_dir = "${path.module}/../../frontend"
 
     environment = {
-      REACT_APP_API_GATEWAY_ENDPOINT = "https://${var.api_domain}/"
-      REACT_APP_KMS_KEY_ID           = aws_kms_key.this.key_id
-      REACT_APP_AWS_REGION           = data.aws_region.current.name
-      REACT_APP_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.app_client.id
-      REACT_APP_COGNITO_DOMAIN       = "https://${aws_cognito_user_pool_domain.main.domain}"
-      REACT_APP_COGNITO_ID           = aws_cognito_user_pool.main.id
-      REACT_APP_LOGOUT_URI           = "https://${var.frontend_domain}/logout"
-      REACT_APP_LOGIN_URI            = "https://${var.frontend_domain}/"
-      REACT_APP_IDENTITY_POOL_ID     = aws_cognito_identity_pool.main.id
+      VITE_API_GATEWAY_ENDPOINT = "https://${var.api_domain}/"
+      VITE_KMS_KEY_ID           = aws_kms_key.this.key_id
+      VITE_AWS_REGION           = data.aws_region.current.name
+      VITE_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.app_client.id
+      VITE_COGNITO_DOMAIN       = "https://${aws_cognito_user_pool_domain.main.domain}"
+      VITE_COGNITO_ID           = aws_cognito_user_pool.main.id
+      VITE_LOGOUT_URI           = "https://${var.frontend_domain}/logout"
+      VITE_LOGIN_URI            = "https://${var.frontend_domain}/"
+      VITE_IDENTITY_POOL_ID     = aws_cognito_identity_pool.main.id
     }
   }
 }

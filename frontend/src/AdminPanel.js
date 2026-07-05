@@ -37,7 +37,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_user_groups?username=${encodeURIComponent(username)}`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_user_groups?username=${encodeURIComponent(username)}`,
         {
           method: "GET",
           headers: {
@@ -58,7 +58,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
   const fetchAllUserGroups = useCallback(async () => {
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_user_groups?listAllUsers=true`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_user_groups?listAllUsers=true`,
         {
           method: "GET",
           headers: {
@@ -98,7 +98,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         const allUsersGroups = await fetchAllUserGroups();
         setUserGroups(allUsersGroups);
 
-        const usersResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`, {
+        const usersResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`, {
           method: "GET",
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -106,7 +106,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         const usersData = await usersResponse.json();
         setUsers(usersData.users);
 
-        const groupsResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_groups`, {
+        const groupsResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_groups`, {
           method: "GET",
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -167,7 +167,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     setError(null);
     setSuccess(null);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}create_user`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}create_user`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -191,7 +191,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       setSuccess("User created successfully!");
       setRecentlyCreatedUserEmail(newEmail);
       setNewEmail("");
-      const usersResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`, {
+      const usersResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -243,7 +243,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     setError(null);
     setSuccess(null);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}add_user_to_groups`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}add_user_to_groups`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ username: recentlyCreatedUserEmail, groups: newUserGroups.map(g => g.value) }),
@@ -309,7 +309,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     }
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}create_group`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}create_group`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ groupName: newGroupName }),
@@ -324,7 +324,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       setNewGroupName("");
       setGroupNameError(null);
       
-      const groupsResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_groups`, {
+      const groupsResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_groups`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -369,7 +369,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
                                    editUser.family_name || editUser.resetPassword;
       
       if (userAttributesProvided) {
-        const updateResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_users`, {
+        const updateResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}edit_users`, {
           method: "PUT",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ 
@@ -388,7 +388,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       let updatedUserGroups = [...(userGroups[editUser.value] || [])];
       
       if (editUser.groupsToAdd.length > 0) {
-        const addResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}add_user_to_groups`, {
+        const addResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}add_user_to_groups`, {
           method: "POST",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ username: editUser.value, groups: editUser.groupsToAdd.map(g => g.value) }),
@@ -405,7 +405,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       }
       
       if (editUser.groupsToRemove.length > 0) {
-        const removeResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}remove_user_from_groups`, {
+        const removeResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}remove_user_from_groups`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ username: editUser.value, groups: editUser.groupsToRemove.map(g => g.value) }),
@@ -432,7 +432,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       
       setSuccess("User updated successfully!");
       setEditUser(null);
-      const usersResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`, {
+      const usersResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -450,7 +450,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     setError(null);
     setSuccess(null);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}edit_users`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}edit_users`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ username: deleteUserConfirm.value, deleteUser: true }),
@@ -465,7 +465,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       
       setSuccess("User deleted successfully!");
       setDeleteUserConfirm(null);
-      const usersResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`, {
+      const usersResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -483,7 +483,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     setError(null);
     setSuccess(null);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}delete_group`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}delete_group`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({ groupName: deleteGroupConfirm.value }),
@@ -491,7 +491,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
       if (!response.ok) throw new Error("Failed to delete group");
       setSuccess("Group deleted successfully!");
       setDeleteGroupConfirm(null);
-      const groupsResponse = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_groups`, {
+      const groupsResponse = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_groups`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });

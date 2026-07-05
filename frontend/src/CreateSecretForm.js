@@ -40,7 +40,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
       try {
         setLoading(true);
         const response = await fetch(
-          `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`,
+          `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`,
           {
             method: "GET",
             headers: {
@@ -172,7 +172,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
       }
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}create_secret`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}create_secret`,
         {
           method: "POST",
           headers: {

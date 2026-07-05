@@ -17,7 +17,7 @@ export const AppProvider = ({ children }) => {
     
     try {
       setIsLoading(true);
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -42,7 +42,7 @@ export const AppProvider = ({ children }) => {
     
     try {
       setIsLoading(true);
-      const response = await fetch(`${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_secrets`, {
+      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_secrets`, {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
