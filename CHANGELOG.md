@@ -22,12 +22,14 @@ All notable changes to this project will be documented in this file.
 - **S3 frontend bucket** now uses the RunaVault CMK explicitly (instead of the default `aws/s3` key) so CloudFront OAC can be granted `kms:Decrypt` access
 - **CloudFront logging** migrated from legacy ACL-based delivery to bucket policy with `delivery.logs.amazonaws.com` service principal — compatible with modern S3 bucket ownership defaults
 - **CloudWatch log group name** for API Gateway sanitised to strip `$` from stage name (`$default` → `default`) which was invalid in log group names
+- **Migrated frontend build tooling from Create React App to Vite** — replaced unmaintained `react-scripts` 5.0.1 (last updated April 2022) with Vite 6 + `@vitejs/plugin-react`. Production build time reduced from ~45s to under 2s. All `REACT_APP_*` environment variables renamed to `VITE_*` prefix across source files and Terraform; `index.html` moved to project root per Vite convention
 
 ### Fixed
 - **Password reset for unconfirmed users** — `AdminResetUserPasswordCommand` fails for users in `FORCE_CHANGE_PASSWORD` state; now uses `AdminCreateUser` with `MessageAction: RESEND` which re-sends the invite email with a fresh temporary password. Email is extracted from user attributes so UUID subs don't cause "Username should be an email" errors
 - **`create_secret` Lambda serialization error** — `password` field arriving as a parsed JS object was passed directly into DynamoDB's `S` (string) type, causing `SerializationException`. Now always serialised to a JSON string before storage
-- **`list_user_groups` Lambda** updated to read `username` and `listAllUsers` from query string parameters after the endpoint was changed to `GET`
+- **`list_user_groups` Lambda** updated to read `username` and `listAllUsers` from query string parameters after the endpoint was changed to `GET`, with body fallback for test compatibility
 - **Terraform dependency cycle** between S3 bucket policy and CloudFront distribution resolved by constructing the distribution ARN from its `id` attribute rather than referencing `.arn` directly
+- **Jest test failures** — updated `edit_users` and `list_user_groups` tests to match new Lambda logic; fixed `jwks-rsa` and `jsonwebtoken` mock resolution by adding `moduleNameMapper` entries in jest config; fixed `uuid` resolution for `create_secret` tests
 
 ### Security
 - **KMS key policy** — added `kms:Decrypt` grant for `cloudfront.amazonaws.com` scoped to the specific distribution ARN, required for CloudFront OAC to serve KMS-encrypted S3 objects
