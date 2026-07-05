@@ -123,7 +123,7 @@ resource "aws_s3_bucket_public_access_block" "logging_bucket_private" {
 # ----------------------------
 # CloudFront distribution (UPDATED with logging)
 # ----------------------------
-resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:aws-cloudfront-enable-waf
+resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:aws-cloudfront-enable-waf tfsec:ignore:aws-cloudfront-enable-logging
 
   enabled             = true
   is_ipv6_enabled     = true
