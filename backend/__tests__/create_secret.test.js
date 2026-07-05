@@ -88,7 +88,7 @@ describe('create_secret Lambda', () => {
       body: JSON.stringify({
         site: 'example.com',
         username: 'testuser',
-        password: '{invalid json}',
+        password: '{invalid json}',  // starts with { but is not valid JSON
         encrypted: true,
         subdirectory: 'default'
       })

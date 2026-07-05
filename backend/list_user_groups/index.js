@@ -13,10 +13,20 @@ export const handler = async (event) => {
     const token = getAuthToken(event);
     await verifyToken(token);
 
-    // Support both GET query params and legacy POST body
+    // Support GET with query params (production) and POST with body (tests/legacy)
     const queryParams = event.queryStringParameters || {};
-    const username = queryParams.username;
-    const listAllUsers = queryParams.listAllUsers === "true";
+    let username = queryParams.username;
+    let listAllUsers = queryParams.listAllUsers === "true";
+
+    if (!username && !listAllUsers && event.body) {
+      try {
+        const body = JSON.parse(event.body);
+        username = body.username;
+        listAllUsers = !!body.listAllUsers;
+      } catch {
+        // ignore parse errors, proceed with query params only
+      }
+    }
 
     if (listAllUsers) {
       const params = {
