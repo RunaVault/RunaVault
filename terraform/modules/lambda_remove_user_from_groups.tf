@@ -15,14 +15,14 @@ module "remove_user_from_groups_function" {
           "cognito-idp:AdminRemoveUserFromGroup"
         ]
         Resource = [
-          "arn:aws:cognito-idp:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:userpool/${aws_cognito_user_pool.main.id}"
+          "arn:aws:cognito-idp:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:userpool/${aws_cognito_user_pool.main.id}"
         ]
       }
     ]
   })
 
   allowed_triggers = {
-    source_arn = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${module.runa_vault_api.api_id}/*/*/remove_user_from_groups"
+    source_arn = "arn:aws:execute-api:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:${module.runa_vault_api.api_id}/*/*/remove_user_from_groups"
   }
 
   environment_variables = {

@@ -7,7 +7,7 @@ module "runa_vault_api" {
 
   create_authorizer   = true
   authorizer_audience = [aws_cognito_user_pool_client.app_client.id]
-  authorizer_issuer   = "https://cognito-idp.${data.aws_region.current.name}.amazonaws.com/${aws_cognito_user_pool.main.id}"
+  authorizer_issuer   = "https://cognito-idp.${data.aws_region.current.region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
   cors_allow_origins  = ["https://${var.frontend_domain}"]
   cors_allow_methods  = ["OPTIONS", "GET", "POST", "PUT", "DELETE"]
   api_domain          = var.api_domain
@@ -15,63 +15,63 @@ module "runa_vault_api" {
   integrations = {
     create_secret = {
       method = "POST"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_create_secret"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_create_secret"
     }
     delete_secret = {
       method = "DELETE"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_delete_secret"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_delete_secret"
     }
     edit_secret = {
       method = "PUT"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_edit_secret"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_edit_secret"
     }
     get_secret = {
       method = "POST"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_get_secret"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_get_secret"
     }
     list_secrets = {
       method = "GET"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_secrets"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_secrets"
     }
     list_users = {
       method = "GET"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_users"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_users"
     }
     create_user = {
       method = "POST"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_create_user"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_create_user"
     }
     list_groups = {
       method = "GET"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_groups"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_groups"
     }
     add_user_to_groups = {
       method = "POST"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_add_user_to_groups"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_add_user_to_groups"
     }
     edit_users = {
       method = "PUT"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_edit_users"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_edit_users"
     }
     list_user_groups = {
       method = "GET"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_user_groups"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_list_user_groups"
     }
     remove_user_from_groups = {
       method = "DELETE"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_remove_user_from_groups"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_remove_user_from_groups"
     }
     delete_group = {
       method = "DELETE"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_delete_group"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_delete_group"
     }
     create_group = {
       method = "POST"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_create_group"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_create_group"
     }
     share_directory = {
       method = "POST"
-      uri    = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:RunaVault_share_directory"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_share_directory"
     }
   }
 

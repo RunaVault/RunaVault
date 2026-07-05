@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
@@ -1300,6 +1300,17 @@ function App() {
 
   const isAdmin = userGroups.includes("Admin");
 
+  const existingTags = useMemo(() => {
+    if (!secrets?.secrets) return [];
+    const tagSet = new Set();
+    secrets.secrets.forEach(secret => {
+      (secret.tags || []).forEach(tag => {
+        if (tag && tag !== "NONE") tagSet.add(tag);
+      });
+    });
+    return Array.from(tagSet).sort().map(tag => ({ value: tag, label: tag }));
+  }, [secrets]);
+
   useEffect(() => {
     if (activeTab === "secrets" && selectedGroup) {
       if (secrets) {
@@ -1613,6 +1624,7 @@ function App() {
                         <CreateSecretForm
                           accessToken={userTokens?.access_token}
                           idToken={userTokens?.id_token}
+                          existingTags={existingTags}
                           onSecretCreated={() => {
                             setIsCreatingSecret(false);
                             resetSecretsData();

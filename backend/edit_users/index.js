@@ -1,4 +1,4 @@
-import { CognitoIdentityProviderClient, AdminDeleteUserCommand, AdminUpdateUserAttributesCommand, AdminResetUserPasswordCommand, AdminSetUserPasswordCommand, AdminGetUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, AdminDeleteUserCommand, AdminUpdateUserAttributesCommand, AdminResetUserPasswordCommand, AdminGetUserCommand, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { verifyToken, formatResponse, parseBody, getAuthToken } from "/opt/utils.js";
 
 const poolData = {
@@ -7,35 +7,6 @@ const poolData = {
 };
 
 const cognito = new CognitoIdentityProviderClient({ region: poolData.region });
-
-// Generates a random temporary password that satisfies Cognito's password policy
-// (min 8 chars, uppercase, lowercase, digit, symbol).
-function generateTempPassword() {
-  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const lower = "abcdefghijklmnopqrstuvwxyz";
-  const digits = "0123456789";
-  const symbols = "!@#$%^&*";
-  const all = upper + lower + digits + symbols;
-
-  const getRandom = (charset) =>
-    charset[Math.floor(Math.random() * charset.length)];
-
-  // Guarantee at least one of each required character class
-  const required = [
-    getRandom(upper),
-    getRandom(lower),
-    getRandom(digits),
-    getRandom(symbols),
-  ];
-
-  // Fill the remaining length with random characters from the full set
-  const remaining = Array.from({ length: 8 }, () => getRandom(all));
-
-  // Shuffle so required chars aren't always at the start
-  return [...required, ...remaining]
-    .sort(() => Math.random() - 0.5)
-    .join("");
-}
 
 export const handler = async (event) => {
   try {
@@ -106,16 +77,18 @@ export const handler = async (event) => {
         const userStatus = userDetails.UserStatus;
 
         if (userStatus === "FORCE_CHANGE_PASSWORD") {
-          // Generate a compliant temporary password and set it as non-permanent
-          // so the user is still required to change it on first login.
-          const tempPassword = generateTempPassword();
-          const setPasswordCommand = new AdminSetUserPasswordCommand({
+          // AdminCreateUser RESEND requires the email address as username
+          // (pool uses email as username_attributes), but the frontend may
+          // pass the sub (UUID). Extract the email from the user record.
+          const emailAttr = userDetails.UserAttributes?.find(a => a.Name === "email");
+          const emailUsername = emailAttr?.Value || username;
+
+          const resendCommand = new AdminCreateUserCommand({
             UserPoolId: poolData.userPoolId,
-            Username: username,
-            Password: tempPassword,
-            Permanent: false,
+            Username: emailUsername,
+            MessageAction: "RESEND",
           });
-          await cognito.send(setPasswordCommand);
+          await cognito.send(resendCommand);
         } else {
           // CONFIRMED users: trigger the standard reset flow which sends
           // a verification code to the user's email.

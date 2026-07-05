@@ -19,14 +19,14 @@ module "edit_secret_function" {
           "dynamodb:BatchWriteItem"
         ]
         Resource = [
-          "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/RunaVault_passwords",
+          "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/RunaVault_passwords",
         ]
       }
     ]
   })
 
   allowed_triggers = {
-    source_arn = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${module.runa_vault_api.api_id}/*/*/edit_secret"
+    source_arn = "arn:aws:execute-api:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:${module.runa_vault_api.api_id}/*/*/edit_secret"
   }
 
   environment_variables = {

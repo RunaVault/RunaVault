@@ -6,7 +6,7 @@ import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import "./App.css";
 
-function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm }) {
+function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, existingTags = [] }) {
   const [site, setSite] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -467,6 +467,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
                 classNamePrefix="select"
                 value={tags}
                 onChange={setTags}
+                options={existingTags}
                 placeholder="Add tags (e.g., work, personal)"
               />
             </div>              
