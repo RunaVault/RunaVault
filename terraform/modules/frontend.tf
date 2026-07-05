@@ -120,34 +120,6 @@ resource "aws_s3_bucket_public_access_block" "logging_bucket_private" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_policy" "logging_bucket" {
-  bucket = aws_s3_bucket.logging_bucket.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontLogDelivery"
-        Effect = "Allow"
-        Principal = {
-          Service = "delivery.logs.amazonaws.com"
-        }
-        Action = [
-          "s3:PutObject",
-          "s3:PutObjectAcl"
-        ]
-        Resource = "${aws_s3_bucket.logging_bucket.arn}/cloudfront-logs/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl"      = "bucket-owner-full-control"
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      }
-    ]
-  })
-}
-
 # ----------------------------
 # CloudFront distribution (UPDATED with logging)
 # ----------------------------
@@ -165,12 +137,9 @@ resource "aws_cloudfront_distribution" "react_app_distribution" { #tfsec:ignore:
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
-  # CloudFront logs
-  logging_config {
-    include_cookies = false
-    bucket          = aws_s3_bucket.logging_bucket.bucket_domain_name
-    prefix          = "cloudfront-logs/"
-  }
+  # CloudFront standard logging via bucket policy (delivery.logs.amazonaws.com)
+  # is configured on the logging bucket — no logging_config block needed here
+  # as it requires legacy ACL access which conflicts with modern S3 defaults.
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
@@ -274,5 +243,42 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
       override = true
       value    = "geolocation=(), microphone=(), camera=(), payment=()"
     }
+  }
+}
+
+resource "null_resource" "build_react_app" {
+  triggers = {
+    always_run = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command     = "npm install && npm run build"
+    working_dir = "${path.module}/../../frontend"
+
+    environment = {
+      REACT_APP_API_GATEWAY_ENDPOINT = "https://${var.api_domain}/"
+      REACT_APP_KMS_KEY_ID           = aws_kms_key.this.key_id
+      REACT_APP_AWS_REGION           = data.aws_region.current.name
+      REACT_APP_COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.app_client.id
+      REACT_APP_COGNITO_DOMAIN       = "https://${aws_cognito_user_pool_domain.main.domain}"
+      REACT_APP_COGNITO_ID           = aws_cognito_user_pool.main.id
+      REACT_APP_LOGOUT_URI           = "https://${var.frontend_domain}/logout"
+      REACT_APP_LOGIN_URI            = "https://${var.frontend_domain}/"
+      REACT_APP_IDENTITY_POOL_ID     = aws_cognito_identity_pool.main.id
+    }
+  }
+}
+
+resource "null_resource" "deploy_frontend" {
+  depends_on = [null_resource.build_react_app]
+  triggers = {
+    deployment_time = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      aws s3 sync ${path.module}/../../frontend/build s3://${aws_s3_bucket.runa_vault_bucket.id} --delete --region ${data.aws_region.current.name} && \
+      aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.react_app_distribution.id} --paths "/*" --region ${data.aws_region.current.name}
+    EOT
   }
 }
