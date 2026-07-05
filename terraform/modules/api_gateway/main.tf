@@ -84,7 +84,7 @@ resource "aws_apigatewayv2_domain_name" "this" {
 }
 
 resource "aws_cloudwatch_log_group" "api_gw_logs" { #tfsec:ignore:aws-cloudwatch-log-group-customer-key
-  name              = "/aws/apigateway/${var.api_name}-${var.stage_name}"
+  name              = "/aws/apigateway/${var.api_name}-${replace(var.stage_name, "$", "")}"
   retention_in_days = 30
 }
 

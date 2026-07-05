@@ -355,7 +355,7 @@ resource "aws_iam_role_policy" "cognito_authenticated_policy" {
           "kms:Decrypt",
         ]
         Resource = [
-          "arn:aws:kms:us-east-1:339713181866:key/a5ffd96a-8d3f-4a45-8cdb-11dd9ea7d079"
+          aws_kms_key.this.arn
         ]
       }
     ]

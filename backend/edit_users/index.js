@@ -1,4 +1,4 @@
-import { CognitoIdentityProviderClient, AdminDeleteUserCommand, AdminUpdateUserAttributesCommand, AdminResetUserPasswordCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, AdminDeleteUserCommand, AdminUpdateUserAttributesCommand, AdminResetUserPasswordCommand, AdminGetUserCommand, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { verifyToken, formatResponse, parseBody, getAuthToken } from "/opt/utils.js";
 
 const poolData = {
@@ -66,11 +66,38 @@ export const handler = async (event) => {
       }
       
       if (password) {
-        const passwordCommand = new AdminResetUserPasswordCommand({
+        // Users in FORCE_CHANGE_PASSWORD state (never logged in) cannot use
+        // AdminResetUserPasswordCommand — it only works for CONFIRMED users.
+        // For those users we re-issue a new temporary password instead.
+        const getUserCommand = new AdminGetUserCommand({
           UserPoolId: poolData.userPoolId,
           Username: username,
         });
-        await cognito.send(passwordCommand);
+        const userDetails = await cognito.send(getUserCommand);
+        const userStatus = userDetails.UserStatus;
+
+        if (userStatus === "FORCE_CHANGE_PASSWORD") {
+          // AdminCreateUser RESEND requires the email address as username
+          // (pool uses email as username_attributes), but the frontend may
+          // pass the sub (UUID). Extract the email from the user record.
+          const emailAttr = userDetails.UserAttributes?.find(a => a.Name === "email");
+          const emailUsername = emailAttr?.Value || username;
+
+          const resendCommand = new AdminCreateUserCommand({
+            UserPoolId: poolData.userPoolId,
+            Username: emailUsername,
+            MessageAction: "RESEND",
+          });
+          await cognito.send(resendCommand);
+        } else {
+          // CONFIRMED users: trigger the standard reset flow which sends
+          // a verification code to the user's email.
+          const passwordCommand = new AdminResetUserPasswordCommand({
+            UserPoolId: poolData.userPoolId,
+            Username: username,
+          });
+          await cognito.send(passwordCommand);
+        }
       }
       
       return formatResponse(200, { message: "User updated successfully" });

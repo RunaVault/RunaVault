@@ -27,18 +27,33 @@ resource "aws_iam_role_policy" "lambda_policy" {
   policy = var.policy_json
 }
 
+# Install npm dependencies before packaging when the function has its own node_modules
+resource "null_resource" "npm_install" {
+  count = var.npm_install ? 1 : 0
+
+  triggers = {
+    deps_hash = filemd5("../../backend/${var.function_name}/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command     = "npm ci --omit=dev"
+    working_dir = "../../backend/${var.function_name}"
+  }
+}
+
 data "archive_file" "lambda" {
   type        = "zip"
   source_dir  = "../../backend/${var.function_name}"
   output_path = "${path.module}/${var.function_name}.zip"
   excludes    = ["${var.function_name}.zip"]
-}
 
+  depends_on = [null_resource.npm_install]
+}
 resource "aws_lambda_function" "lambda" { #tfsec:ignore:aws-lambda-enable-tracing
   function_name = "RunaVault_${var.function_name}"
   description   = var.description
   handler       = "index.handler"
-  runtime       = "nodejs22.x"
+  runtime       = "nodejs24.x"
   role          = aws_iam_role.lambda_role.arn
   publish       = true
   timeout       = var.timeout
@@ -84,7 +99,7 @@ resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.function_name}:*"]
+        Resource = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/RunaVault_${var.function_name}:*"]
       }
     ]
   })

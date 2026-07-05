@@ -62,3 +62,9 @@ variable "timeout" {
   type        = number
   default     = 3
 }
+
+variable "npm_install" {
+  description = "Run npm ci --omit=dev in the source directory before packaging. Set to true for functions with their own node_modules."
+  type        = bool
+  default     = false
+}

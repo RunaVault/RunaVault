@@ -29,17 +29,17 @@ jest.mock('jsonwebtoken', () => ({
   __esModule: true,
   decode: mockDecodeFn,
   verify: mockVerifyFn,
-  default: { // For default import: import jwt from 'jsonwebtoken'
+  default: {
     decode: mockDecodeFn,
     verify: mockVerifyFn,
   }
-}), { virtual: true });
+}));
 
 jest.mock('jwks-rsa', () => ({
   __esModule: true,
-  default: mockJwksRsaConstructor, // Assuming jwks-rsa is imported as a default export
-  JwksClient: mockJwksRsaConstructor // Also mock JwksClient if it's a named export used like new JwksClient()
-}), { virtual: true });
+  default: mockJwksRsaConstructor,
+  JwksClient: mockJwksRsaConstructor
+}));
 
 // For tests, use mockDecodeFn, mockVerifyFn, and mockClientGetSigningKeyFn
 

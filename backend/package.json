@@ -19,7 +19,8 @@
     "jwks-rsa": "^3.1.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.995.0",
     "aws-sdk-client-mock": "^4.1.0",
-    "aws-sdk-client-mock-jest": "^4.1.0"
+    "aws-sdk-client-mock-jest": "^4.1.0",
+    "uuid": "^11.0.0"
   },
   "type": "module"
 }

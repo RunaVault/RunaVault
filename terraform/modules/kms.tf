@@ -24,6 +24,20 @@ resource "aws_kms_key" "this" {
         },
         Action   = ["kms:Encrypt", "kms:Decrypt"]
         Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudFront OAC to decrypt S3 objects"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "kms:Decrypt"
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.react_app_distribution.id}"
+          }
+        }
       }
     ]
   })

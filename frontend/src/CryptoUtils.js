@@ -2,8 +2,8 @@ import { KMSClient, EncryptCommand, DecryptCommand } from "@aws-sdk/client-kms";
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
 
-const AWS_REGION = process.env.REACT_APP_AWS_REGION;
-const KMS_KEY_ID = process.env.REACT_APP_KMS_KEY_ID;
+const AWS_REGION = import.meta.env.VITE_AWS_REGION;
+const KMS_KEY_ID = import.meta.env.VITE_KMS_KEY_ID;
 
 export const isCryptoSupported = () => {
   return window.crypto && window.crypto.subtle;
@@ -18,9 +18,9 @@ const initKMS = async (idToken) => {
   try {
     const credentials = fromCognitoIdentityPool({
       client: new CognitoIdentityClient({ region: AWS_REGION }),
-      identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID,
+      identityPoolId: import.meta.env.VITE_IDENTITY_POOL_ID,
       logins: {
-        [`cognito-idp.${process.env.REACT_APP_AWS_REGION}.amazonaws.com/${process.env.REACT_APP_COGNITO_ID}`]: idToken,
+        [`cognito-idp.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${import.meta.env.VITE_COGNITO_ID}`]: idToken,
       },
     });
 

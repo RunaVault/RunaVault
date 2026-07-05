@@ -6,7 +6,7 @@ import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import "./App.css";
 
-function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm }) {
+function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, existingTags = [] }) {
   const [site, setSite] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -40,7 +40,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
       try {
         setLoading(true);
         const response = await fetch(
-          `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}list_users`,
+          `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}list_users`,
           {
             method: "GET",
             headers: {
@@ -106,6 +106,24 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
     setShowPassword(true);
   };
 
+  const getPasswordStrength = (pwd) => {
+    if (!pwd) return null;
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (pwd.length >= 12) score++;
+    if (pwd.length >= 16) score++;
+    if (/[a-z]/.test(pwd)) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+    if (score <= 2) return { label: "Weak", level: 1 };
+    if (score <= 4) return { label: "Fair", level: 2 };
+    if (score <= 5) return { label: "Good", level: 3 };
+    return { label: "Strong", level: 4 };
+  };
+
+  const passwordStrength = getPasswordStrength(password);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -154,7 +172,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
       }
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_GATEWAY_ENDPOINT}create_secret`,
+        `${import.meta.env.VITE_API_GATEWAY_ENDPOINT}create_secret`,
         {
           method: "POST",
           headers: {
@@ -327,6 +345,19 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
                   <FontAwesomeIcon icon={faShuffle} />
                 </button>
               </div>
+              {password && passwordStrength && (
+                <div className="password-strength mt-2" aria-live="polite">
+                  <div className="password-strength-bar">
+                    <div
+                      className={`password-strength-fill strength-${passwordStrength.level}`}
+                      style={{ width: `${(passwordStrength.level / 4) * 100}%` }}
+                    />
+                  </div>
+                  <span className={`password-strength-label strength-label-${passwordStrength.level}`}>
+                    {passwordStrength.label}
+                  </span>
+                </div>
+              )}
               {passwordError && (
                 <div className="invalid-feedback create-invalid-feedback d-block" role="alert">
                   {passwordError}
@@ -436,6 +467,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm })
                 classNamePrefix="select"
                 value={tags}
                 onChange={setTags}
+                options={existingTags}
                 placeholder="Add tags (e.g., work, personal)"
               />
             </div>              

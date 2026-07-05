@@ -39,16 +39,23 @@ export const handler = async (event) => {
       });
     }
     let passwordData;
+    let passwordString;
     try {
-      passwordData = typeof rawPassword === "string" && rawPassword.startsWith("{")
-        ? JSON.parse(rawPassword)
-        : { encryptedPassword: rawPassword, sharedWith: { users: [], groups: [] } };
+      if (typeof rawPassword === "object" && rawPassword !== null) {
+        // Frontend sent a parsed object — serialize it back to a string for storage
+        passwordData = rawPassword;
+        passwordString = JSON.stringify(rawPassword);
+      } else if (typeof rawPassword === "string" && rawPassword.startsWith("{")) {
+        passwordData = JSON.parse(rawPassword);
+        passwordString = rawPassword;
+      } else {
+        passwordData = { encryptedPassword: rawPassword, sharedWith: { users: [], groups: [] } };
+        passwordString = typeof rawPassword === "string" ? rawPassword : JSON.stringify(rawPassword);
+      }
     } catch (e) {
       console.error("Failed to parse password:", e);
       return formatResponse(400, { message: "Invalid password format" });
     }
-
-    const { encryptedPassword } = passwordData;
 
     const lastModified = new Date().toISOString();
     const passwordId = uuidv4();
@@ -58,7 +65,7 @@ export const handler = async (event) => {
     const baseDynamoItem = {
       user_id: { S: userId },
       username: { S: username },
-      password: { S: encrypted ? rawPassword : rawPassword },
+      password: { S: passwordString },
       encrypted: { BOOL: encrypted },
       shared_with_roles: {
         M: Object.fromEntries(

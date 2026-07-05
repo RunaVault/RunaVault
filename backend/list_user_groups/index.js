@@ -1,5 +1,5 @@
 import { CognitoIdentityProviderClient, AdminListGroupsForUserCommand, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { verifyToken, formatResponse, parseBody, getAuthToken } from "/opt/utils.js";
+import { verifyToken, formatResponse, getAuthToken } from "/opt/utils.js";
 
 const poolData = {
   userPoolId: process.env.USER_POOL_ID,
@@ -13,7 +13,20 @@ export const handler = async (event) => {
     const token = getAuthToken(event);
     await verifyToken(token);
 
-    const { username, listAllUsers } = parseBody(event.body || "{}");
+    // Support GET with query params (production) and POST with body (tests/legacy)
+    const queryParams = event.queryStringParameters || {};
+    let username = queryParams.username;
+    let listAllUsers = queryParams.listAllUsers === "true";
+
+    if (!username && !listAllUsers && event.body) {
+      try {
+        const body = JSON.parse(event.body);
+        username = body.username;
+        listAllUsers = !!body.listAllUsers;
+      } catch {
+        // ignore parse errors, proceed with query params only
+      }
+    }
 
     if (listAllUsers) {
       const params = {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
@@ -24,7 +24,7 @@ import QRCode from 'qrcode';
 import { AppProvider, useAppContext } from './AppContext';
 
 const cognitoClient = new CognitoIdentityProviderClient({
-  region: process.env.REACT_APP_AWS_REGION,
+  region: import.meta.env.VITE_AWS_REGION,
 });
 
 const ChangePasswordForm = ({ accessToken, onSuccess, onCancel }) => {
@@ -206,7 +206,7 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
 
     try {
       const command = new ForgotPasswordCommand({
-        ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+        ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
         Username: email
       });
       
@@ -232,7 +232,7 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
 
     try {
       const command = new ConfirmForgotPasswordCommand({
-        ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+        ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
         Username: email,
         ConfirmationCode: verificationCode,
         Password: newPassword
@@ -449,7 +449,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
       
       if (response.Status === 'SUCCESS') {
         const challengeCommand = new RespondToAuthChallengeCommand({
-          ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+          ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
           ChallengeName: "MFA_SETUP",
           Session: response.Session,
           ChallengeResponses: {
@@ -585,7 +585,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
 
         try {
           const challengeCommand = new RespondToAuthChallengeCommand({
-            ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+            ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
             ChallengeName: "NEW_PASSWORD_REQUIRED",
             Session: session,
             ChallengeResponses: {
@@ -628,7 +628,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
         }
       } else if (challenge === "SMS_MFA" || challenge === "SOFTWARE_TOKEN_MFA") {
         const challengeCommand = new RespondToAuthChallengeCommand({
-          ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+          ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
           ChallengeName: challenge,
           ChallengeResponses: {
             USERNAME: email,
@@ -658,7 +658,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
       } else {
         const command = new InitiateAuthCommand({
           AuthFlow: "USER_PASSWORD_AUTH",
-          ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+          ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
           AuthParameters: {
             USERNAME: email,
             PASSWORD: password,
@@ -974,7 +974,7 @@ function App() {
           try {
             const command = new InitiateAuthCommand({
               AuthFlow: "REFRESH_TOKEN_AUTH",
-              ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+              ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
               AuthParameters: {
                 REFRESH_TOKEN: storedRefreshToken
               }
@@ -1300,6 +1300,17 @@ function App() {
 
   const isAdmin = userGroups.includes("Admin");
 
+  const existingTags = useMemo(() => {
+    if (!secrets?.secrets) return [];
+    const tagSet = new Set();
+    secrets.secrets.forEach(secret => {
+      (secret.tags || []).forEach(tag => {
+        if (tag && tag !== "NONE") tagSet.add(tag);
+      });
+    });
+    return Array.from(tagSet).sort().map(tag => ({ value: tag, label: tag }));
+  }, [secrets]);
+
   useEffect(() => {
     if (activeTab === "secrets" && selectedGroup) {
       if (secrets) {
@@ -1320,7 +1331,7 @@ function App() {
     try {
       const command = new InitiateAuthCommand({
         AuthFlow: "REFRESH_TOKEN_AUTH",
-        ClientId: process.env.REACT_APP_COGNITO_CLIENT_ID,
+        ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
         AuthParameters: {
           REFRESH_TOKEN: localStorage.getItem("refresh_token")
         }
@@ -1613,6 +1624,7 @@ function App() {
                         <CreateSecretForm
                           accessToken={userTokens?.access_token}
                           idToken={userTokens?.id_token}
+                          existingTags={existingTags}
                           onSecretCreated={() => {
                             setIsCreatingSecret(false);
                             resetSecretsData();

@@ -24,16 +24,16 @@ library.add(
 ); 
 
 const cognitoAuthConfig = {
-  authority: `https://cognito-idp.${process.env.REACT_APP_AWS_REGION}.amazonaws.com/${process.env.REACT_APP_COGNITO_ID}`,
-  client_id: process.env.REACT_APP_COGNITO_CLIENT_ID,
-  redirect_uri: process.env.REACT_APP_LOGIN_URI,
+  authority: `https://cognito-idp.${import.meta.env.VITE_AWS_REGION}.amazonaws.com/${import.meta.env.VITE_COGNITO_ID}`,
+  client_id: import.meta.env.VITE_COGNITO_CLIENT_ID,
+  redirect_uri: import.meta.env.VITE_LOGIN_URI,
   response_type: "code",
   scope: "email openid profile",
   automaticSilentRenew: false,
   onSigninCallback: () => {
     window.history.replaceState({}, document.title, window.location.pathname);
   },
-  silent_redirect_uri: process.env.REACT_APP_LOGIN_URI,
+  silent_redirect_uri: import.meta.env.VITE_LOGIN_URI,
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

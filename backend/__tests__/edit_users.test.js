@@ -3,7 +3,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { CognitoIdentityProviderClient, AdminDeleteUserCommand, AdminUpdateUserAttributesCommand, AdminResetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminDeleteUserCommand, AdminUpdateUserAttributesCommand, AdminResetUserPasswordCommand, AdminGetUserCommand, AdminCreateUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 
 // Mock AWS SDK
 const mockSend = jest.fn();
@@ -29,6 +29,14 @@ jest.mock('@aws-sdk/client-cognito-identity-provider', () => {
     AdminResetUserPasswordCommand: jest.fn().mockImplementation(params => ({
       ...params,
       constructor: { name: 'AdminResetUserPasswordCommand' }
+    })),
+    AdminGetUserCommand: jest.fn().mockImplementation(params => ({
+      ...params,
+      constructor: { name: 'AdminGetUserCommand' }
+    })),
+    AdminCreateUserCommand: jest.fn().mockImplementation(params => ({
+      ...params,
+      constructor: { name: 'AdminCreateUserCommand' }
     }))
   };
 });
@@ -175,8 +183,13 @@ describe('edit_users Lambda', () => {
       })
     };
 
-    // Mock Cognito response
-    mockSend.mockResolvedValueOnce({});
+    // Mock AdminGetUser (status check) then AdminResetUserPassword
+    mockSend
+      .mockResolvedValueOnce({
+        UserStatus: 'CONFIRMED',
+        UserAttributes: [{ Name: 'email', Value: 'testuser@example.com' }]
+      })
+      .mockResolvedValueOnce({});
 
     // Call handler
     const response = await handler(event);
@@ -186,11 +199,13 @@ describe('edit_users Lambda', () => {
     const responseBody = JSON.parse(response.body);
     expect(responseBody.message).toBe('User updated successfully');
 
-    // Verify Cognito calls
-    expect(mockSend).toHaveBeenCalledTimes(1);
+    // Verify Cognito calls: AdminGetUser + AdminResetUserPassword
+    expect(mockSend).toHaveBeenCalledTimes(2);
     
-    // Check password reset command
-    const passwordCommand = mockSend.mock.calls[0][0];
+    const getUserCommand = mockSend.mock.calls[0][0];
+    expect(getUserCommand.constructor.name).toBe('AdminGetUserCommand');
+
+    const passwordCommand = mockSend.mock.calls[1][0];
     expect(passwordCommand.constructor.name).toBe('AdminResetUserPasswordCommand');
     expect(passwordCommand.UserPoolId).toBe('test-user-pool-id');
     expect(passwordCommand.Username).toBe('testuser');
@@ -209,8 +224,14 @@ describe('edit_users Lambda', () => {
       })
     };
 
-    // Mock Cognito responses
-    mockSend.mockResolvedValueOnce({}).mockResolvedValueOnce({});
+    // Mock: AdminUpdateUserAttributes, AdminGetUser, AdminResetUserPassword
+    mockSend
+      .mockResolvedValueOnce({})  // AdminUpdateUserAttributesCommand
+      .mockResolvedValueOnce({
+        UserStatus: 'CONFIRMED',
+        UserAttributes: [{ Name: 'email', Value: 'testuser@example.com' }]
+      })  // AdminGetUserCommand
+      .mockResolvedValueOnce({});  // AdminResetUserPasswordCommand
 
     // Call handler
     const response = await handler(event);
@@ -220,15 +241,16 @@ describe('edit_users Lambda', () => {
     const responseBody = JSON.parse(response.body);
     expect(responseBody.message).toBe('User updated successfully');
 
-    // Verify Cognito calls
-    expect(mockSend).toHaveBeenCalledTimes(2);
+    // Verify Cognito calls: update + get + reset
+    expect(mockSend).toHaveBeenCalledTimes(3);
     
-    // Check update command
     const updateCommand = mockSend.mock.calls[0][0];
     expect(updateCommand.constructor.name).toBe('AdminUpdateUserAttributesCommand');
     
-    // Check password reset command
-    const passwordCommand = mockSend.mock.calls[1][0];
+    const getUserCommand = mockSend.mock.calls[1][0];
+    expect(getUserCommand.constructor.name).toBe('AdminGetUserCommand');
+
+    const passwordCommand = mockSend.mock.calls[2][0];
     expect(passwordCommand.constructor.name).toBe('AdminResetUserPasswordCommand');
   });
 

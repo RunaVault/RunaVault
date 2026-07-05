@@ -5,8 +5,11 @@ module.exports = {
   transformIgnorePatterns: ['<rootDir>/node_modules/'],
   moduleNameMapper: {
     '^@aws-sdk/client-dynamodb$': '<rootDir>/node_modules/@aws-sdk/client-dynamodb',
+    '^uuid$': '<rootDir>/node_modules/uuid',
+    '^jsonwebtoken$': '<rootDir>/node_modules/jsonwebtoken',
+    '^jwks-rsa$': '<rootDir>/node_modules/jwks-rsa',
   },
-  moduleDirectories: ['node_modules'],
+  moduleDirectories: ['node_modules', '<rootDir>/create_secret/node_modules'],
   moduleFileExtensions: ['js', 'json', 'jsx', 'node'],
   testEnvironment: 'node',
   testEnvironmentOptions: {
