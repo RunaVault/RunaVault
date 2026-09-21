@@ -20,6 +20,19 @@ module "get_secret_function" {
           "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/RunaVault_passwords/index/shared_with_groups-index"
 
         ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["dynamodb:PutItem"]
+        Resource = ["arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/RunaVault_audit_log"]
+      },
+      {
+        # Server-side decrypt for CLI/machine-token reads (plaintext=true).
+        # The browser continues to decrypt client-side via the Cognito
+        # Identity Pool role - this is additive, not a replacement.
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = [aws_kms_key.this.arn]
       }
     ]
   })
@@ -29,7 +42,8 @@ module "get_secret_function" {
   }
 
   environment_variables = {
-    USER_POOL_ID = aws_cognito_user_pool.main.id
+    USER_POOL_ID     = aws_cognito_user_pool.main.id
+    AUDIT_TABLE_NAME = aws_dynamodb_table.audit_log.name
   }
   tags = merge(
     local.common_tags,

@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
-    "jwks-rsa": "^3.1.0"
+    "jwks-rsa": "^3.1.0",
+    "ipaddr.js": "^2.2.0"
   }
 }

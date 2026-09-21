@@ -114,11 +114,52 @@ RunaVault's backend is designed to operate within AWS's free tier, making it cos
 4. **Manage Secrets**: View, edit, or delete secrets in the "Secrets" tab; share with users or groups.
 5. **Directory Sharing**: Share entire subdirectories with specific permissions.
 
+## CLI
+
+RunaVault also has a dedicated command-line client, [`runa`](https://github.com/RunaVault/RunaCli), for local development, CI/CD pipelines, servers, and scripts:
+
+```bash
+runa login
+runa secret list
+runa secret get production/database
+runa run -- npm start
+```
+
+`runa login` opens a browser and authenticates via Cognito's hosted UI (Authorization Code + PKCE) - your password is never seen by the CLI, only short-lived tokens cached in your OS keychain. See the [RunaCli README](https://github.com/RunaVault/RunaCli#readme) for installation and full usage.
+
+## Machine Authentication
+
+CI/CD pipelines, servers, and automation don't log in interactively - they use **machine tokens**, a separate credential type from human Cognito sessions:
+
+```bash
+runa auth token create \
+  --name github-actions \
+  --scope secrets:read \
+  --expires-in 30d \
+  --secret-path "production/*" \
+  --ip 203.0.113.10
+```
+
+```bash
+export RUNA_TOKEN=rv_live_xxxxxxxxxxxxxxxxxxxxxxxxx
+runa secret get production/database
+```
+
+Machine tokens are:
+
+- **Opaque, cryptographically random credentials** (`rv_live_...`), not JWTs. RunaVault stores only a SHA-256 hash - the plaintext is shown exactly once, at creation.
+- **Scoped**: least-privilege permissions (currently `secrets:read`; the model supports adding write/delete scopes later without changing the token format).
+- **Restrictable by secret path** (glob patterns like `production/*`) and by **IP address/CIDR**.
+- **Immediately revocable** (`runa auth token revoke`) and **rotatable** (`runa auth token rotate`) - revocation takes effect on the very next request, with no caching window.
+
+All of the above - scope, secret-path, and IP restrictions - are **enforced server-side** in RunaVault's API, by a dual-mode Lambda authorizer that authenticates either a Cognito JWT (humans) or a machine token (machines) on every request, plus per-handler checks for path and scope. The CLI's flags only set these restrictions at creation time; they are never a client-side-only control. See [`docs/machine-authentication.md`](docs/machine-authentication.md) for the full request flow and encryption model.
+
 ## Security Considerations
 
-- Passwords are encrypted client-side using AWS KMS before being sent to the backend.
+- Passwords are encrypted client-side using AWS KMS before being sent to the backend. CLI/machine-token secret reads are decrypted **server-side** by a narrowly-scoped Lambda instead (see [`docs/machine-authentication.md`](docs/machine-authentication.md)) - the browser path is unchanged.
 - Sharing uses role-based access control (Viewer/Editor) enforced by Cognito groups.
-- Tokens (ID, Access, Refresh) are handled securely via `react-oidc-context` and validated at API Gateway and Lambda levels.
+- Tokens (ID, Access, Refresh) are handled securely via `react-oidc-context`; every API request is authenticated by a Lambda authorizer that verifies either a Cognito JWT or a machine token before any handler runs.
+- Machine tokens are never logged or stored in plaintext; only their SHA-256 hash is persisted, and usage is recorded in a separate audit log (token, owner, action, resource, source IP, timestamp - never secret values).
 - Avoid sharing "Danger Area" information (e.g., tokens) displayed in the User Info tab.
 - All users must enable Multi-Factor Authentication (MFA) as part of the Cognito signup flow, adding an extra layer of protection beyond username and password.
 

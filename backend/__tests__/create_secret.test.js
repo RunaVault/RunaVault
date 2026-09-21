@@ -24,6 +24,11 @@ jest.mock('/opt/utils.js', () => ({
   formatResponse: jest.fn((status, body) => ({ statusCode: status, body: JSON.stringify(body) }))
 }), { virtual: true });
 
+jest.mock('/opt/authz.js', () => ({
+  __esModule: true,
+  isMachineToken: jest.fn(() => false),
+}), { virtual: true });
+
 let handler;
 import { DynamoDBClient, PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import * as utils from '/opt/utils.js';

@@ -26,6 +26,19 @@ resource "aws_kms_key" "this" {
         Resource = "*"
       },
       {
+        # CLI/machine-token secret reads are decrypted server-side by this
+        # Lambda instead of client-side in the browser - see
+        # backend/get_secret/index.js and terraform/modules/lambda_get_secret.tf.
+        # Decrypt-only: this role never creates ciphertext.
+        Sid    = "Allow get_secret Lambda to decrypt secrets for CLI/machine-token reads"
+        Effect = "Allow"
+        Principal = {
+          AWS = module.get_secret_function.lambda_role_arn
+        }
+        Action   = ["kms:Decrypt"]
+        Resource = "*"
+      },
+      {
         Sid    = "Allow CloudFront OAC to decrypt S3 objects"
         Effect = "Allow"
         Principal = {
