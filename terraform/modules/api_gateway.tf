@@ -5,13 +5,14 @@ module "runa_vault_api" {
   api_name        = "RunaVault-api"
   api_description = "RunaVault API Gateway"
 
-  create_authorizer   = true
-  authorizer_audience = [aws_cognito_user_pool_client.app_client.id]
-  authorizer_issuer   = "https://cognito-idp.${data.aws_region.current.region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
-  cors_allow_origins  = ["https://${var.frontend_domain}"]
-  cors_allow_methods  = ["OPTIONS", "GET", "POST", "PUT", "DELETE"]
-  api_domain          = var.api_domain
-  certificate_arn     = aws_acm_certificate.regional.arn
+  create_authorizer                = true
+  authorizer_type                  = "REQUEST"
+  authorizer_uri                   = module.authorizer_function.lambda_function_arn
+  authorizer_result_ttl_in_seconds = 0
+  cors_allow_origins               = ["https://${var.frontend_domain}"]
+  cors_allow_methods               = ["OPTIONS", "GET", "POST", "PUT", "DELETE"]
+  api_domain                       = var.api_domain
+  certificate_arn                  = aws_acm_certificate.regional.arn
   integrations = {
     create_secret = {
       method = "POST"
@@ -73,6 +74,22 @@ module "runa_vault_api" {
       method = "POST"
       uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_share_directory"
     }
+    auth_token_create = {
+      method = "POST"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_auth_token_create"
+    }
+    auth_token_list = {
+      method = "GET"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_auth_token_list"
+    }
+    auth_token_revoke = {
+      method = "DELETE"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_auth_token_revoke"
+    }
+    auth_token_rotate = {
+      method = "POST"
+      uri    = "arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:RunaVault_auth_token_rotate"
+    }
   }
 
   routes = {
@@ -120,6 +137,18 @@ module "runa_vault_api" {
     }
     "DELETE /remove_user_from_groups" = {
       integration_key = "remove_user_from_groups"
+    }
+    "POST /auth/tokens" = {
+      integration_key = "auth_token_create"
+    }
+    "GET /auth/tokens" = {
+      integration_key = "auth_token_list"
+    }
+    "DELETE /auth/tokens/{tokenId}" = {
+      integration_key = "auth_token_revoke"
+    }
+    "POST /auth/tokens/{tokenId}/rotate" = {
+      integration_key = "auth_token_rotate"
     }
   }
 

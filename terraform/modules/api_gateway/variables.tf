@@ -34,33 +34,55 @@ variable "tags" {
 }
 
 variable "create_authorizer" {
-  description = "Whether to create a JWT authorizer"
+  description = "Whether to create an authorizer"
   type        = bool
   default     = false
 }
 
+variable "authorizer_type" {
+  description = "Authorizer type: \"JWT\" (native Cognito JWT authorizer) or \"REQUEST\" (Lambda authorizer, e.g. the dual-mode Cognito/machine-token authorizer)"
+  type        = string
+  default     = "JWT"
+  validation {
+    condition     = contains(["JWT", "REQUEST"], var.authorizer_type)
+    error_message = "authorizer_type must be either \"JWT\" or \"REQUEST\"."
+  }
+}
+
 variable "authorizer_identity_sources" {
-  description = "Identity sources for the JWT authorizer"
+  description = "Identity sources for the authorizer"
   type        = list(string)
   default     = ["$request.header.Authorization"]
 }
 
 variable "authorizer_name" {
-  description = "Name of the JWT authorizer"
+  description = "Name of the authorizer"
   type        = string
   default     = "cognito"
 }
 
 variable "authorizer_audience" {
-  description = "Audience for the JWT authorizer"
+  description = "Audience for the JWT authorizer (authorizer_type = \"JWT\" only)"
   type        = list(string)
   default     = []
 }
 
 variable "authorizer_issuer" {
-  description = "Issuer for the JWT authorizer"
+  description = "Issuer for the JWT authorizer (authorizer_type = \"JWT\" only)"
   type        = string
   default     = ""
+}
+
+variable "authorizer_uri" {
+  description = "Lambda invoke ARN for the authorizer (authorizer_type = \"REQUEST\" only)"
+  type        = string
+  default     = ""
+}
+
+variable "authorizer_result_ttl_in_seconds" {
+  description = "How long API Gateway may cache a REQUEST authorizer's decision. Kept at 0 so token revocation takes effect immediately."
+  type        = number
+  default     = 0
 }
 
 variable "integrations" {
@@ -94,4 +116,16 @@ variable "certificate_arn" {
   description = "ARN of the ACM certificate for the custom domain"
   type        = string
   default     = ""
+}
+
+variable "throttling_burst_limit" {
+  description = "Default per-stage burst throttle limit (API Gateway account/stage level; a WAFv2 Web ACL is recommended in addition for production)"
+  type        = number
+  default     = 50
+}
+
+variable "throttling_rate_limit" {
+  description = "Default per-stage steady-state throttle limit (requests/second)"
+  type        = number
+  default     = 25
 }

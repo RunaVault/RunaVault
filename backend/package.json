@@ -9,6 +9,8 @@
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.995.0",
+    "@aws-sdk/client-kms": "^3.995.0",
+    "ipaddr.js": "^2.2.0",
     "@babel/core": "^7.29.6",
     "@babel/plugin-transform-modules-commonjs": "^7.22.20",
     "@babel/preset-env": "^7.22.20",

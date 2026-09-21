@@ -1,5 +1,5 @@
 {
-  "name": "get_secrets",
+  "name": "auth_token_revoke",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,5 @@
   "license": "ISC",
   "description": "",
   "type": "module",
-  "dependencies": {
-    "@aws-sdk/client-kms": "^3.995.0"
-  }
+  "dependencies": {}
 }

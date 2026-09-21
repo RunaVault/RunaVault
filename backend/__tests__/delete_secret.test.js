@@ -44,6 +44,10 @@ jest.mock('/opt/utils.js', () => {
   };
 }, { virtual: true });
 
+jest.mock('/opt/authz.js', () => ({
+  isMachineToken: jest.fn(() => false),
+}), { virtual: true });
+
 // Set environment variables
 process.env.TABLE_PREFIX = 'Test_';
 

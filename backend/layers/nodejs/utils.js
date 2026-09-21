@@ -17,6 +17,19 @@ export async function verifyToken(token) {
   return jwt.verify(token, key.getPublicKey(), { algorithms: ["RS256"] });
 }
 
+// Stricter variant used by the dual-mode authorizer: since API Gateway no
+// longer validates the Cognito JWT itself (that's now this Lambda's job),
+// audience/issuer must be checked explicitly rather than left to the caller.
+export async function verifyCognitoToken(token, { audience, issuer } = {}) {
+  const decoded = jwt.decode(token, { complete: true });
+  if (!decoded?.header?.kid) throw new Error("Invalid token: Missing key ID");
+  const key = await getSigningKey(decoded.header.kid);
+  const options = { algorithms: ["RS256"] };
+  if (audience) options.audience = audience;
+  if (issuer) options.issuer = issuer;
+  return jwt.verify(token, key.getPublicKey(), options);
+}
+
 export function formatResponse(statusCode, body, headers = {}) {
   return {
     statusCode,

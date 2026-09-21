@@ -1,5 +1,6 @@
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
-import { verifyToken, formatResponse, getAuthToken } from "/opt/utils.js";
+import { formatResponse } from "/opt/utils.js";
+import { getAuthContext, requireScope, isSecretPathAllowed, toSecretPath } from "/opt/authz.js";
 
 const dynamoDB = new DynamoDBClient({});
 const TABLE_PREFIX = process.env.TABLE_PREFIX || "RunaVault_";
@@ -45,14 +46,17 @@ function formatSecret(item) {
 
 export const handler = async (event) => {
   try {
-    const token = getAuthToken(event);
-    const decoded = await verifyToken(token);
-
-    const userId = decoded.sub;
-    const userGroups = decoded["cognito:groups"] || [];
+    // Identity/authorization already established by the dual-mode Lambda
+    // authorizer - read its context instead of re-verifying the token here.
+    const ctx = getAuthContext(event);
+    const userId = ctx.userId;
+    const userGroups = ctx.groups || [];
 
     if (!userId) {
       return formatResponse(400, { message: "Invalid token: Missing userId" });
+    }
+    if (!requireScope(ctx, "secrets:read")) {
+      return formatResponse(403, { message: "Forbidden" });
     }
 
     console.log(`Fetching secrets for user: ${userId}`);
@@ -147,7 +151,12 @@ export const handler = async (event) => {
 
     uniqueSecrets.sort((a, b) => a.site.toLowerCase().localeCompare(b.site.toLowerCase()));
 
-    return formatResponse(200, { secrets: uniqueSecrets });
+    const visibleSecrets =
+      ctx.authType === "machine"
+        ? uniqueSecrets.filter((secret) => isSecretPathAllowed(ctx, toSecretPath(secret.site, secret.subdirectory)))
+        : uniqueSecrets;
+
+    return formatResponse(200, { secrets: visibleSecrets });
   } catch (error) {
     console.error("Error fetching secrets:", error);
     return formatResponse(500, { message: error.message || "Internal Server Error" });

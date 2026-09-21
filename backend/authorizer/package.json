@@ -1,5 +1,5 @@
 {
-  "name": "get_secrets",
+  "name": "authorizer",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -8,9 +8,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Dual-mode (Cognito JWT / machine token) HTTP API Lambda authorizer",
   "type": "module",
-  "dependencies": {
-    "@aws-sdk/client-kms": "^3.995.0"
-  }
+  "dependencies": {}
 }

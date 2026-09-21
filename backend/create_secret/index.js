@@ -4,6 +4,7 @@ import {
   PutItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { verifyToken, formatResponse, parseBody, getAuthToken } from "/opt/utils.js";
+import { isMachineToken } from "/opt/authz.js";
 import { v4 as uuidv4 } from 'uuid';
 
 const dynamoDB = new DynamoDBClient({});
@@ -12,6 +13,10 @@ const TABLE_PREFIX = process.env.TABLE_PREFIX || "RunaVault_";
 export const handler = async (event) => {
   try {
     const token = getAuthToken(event);
+    if (isMachineToken(token)) {
+      // Machine tokens are read-only in this MVP (scope secrets:read only).
+      return formatResponse(403, { message: "Forbidden" });
+    }
     const decoded = await verifyToken(token);
     const userId = decoded.sub;
     const body = parseBody(event.body || "{}");
