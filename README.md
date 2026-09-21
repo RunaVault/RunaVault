@@ -20,7 +20,68 @@ RunaVault is a secure, serverless password management application built using AW
 
 ## Architecture
 
-![RunaVault AWS Architecture](img/runavault-diagram.png)
+```mermaid
+flowchart TB
+    subgraph Clients["Clients"]
+        Browser["React Frontend<br/>(browser)"]
+        CLI["runa CLI<br/>(local dev / CI/CD / servers)"]
+    end
+
+    subgraph Edge["Delivery"]
+        CF["CloudFront"]
+        S3["S3<br/>(static frontend build)"]
+    end
+
+    subgraph Auth["Cognito"]
+        UserPool["User Pool<br/>(Hosted UI, MFA, groups)"]
+        IdPool["Identity Pool<br/>(federates ID token -> temp AWS creds)"]
+    end
+
+    subgraph Gateway["API Gateway (HTTP API)"]
+        Authorizer["Lambda Authorizer<br/>(dual-mode: Cognito JWT or rv_live_ machine token)"]
+        Routes["Routes<br/>/secrets, /users, /groups, /auth/tokens"]
+    end
+
+    subgraph Compute["Lambda Functions"]
+        SecretFns["Secret CRUD + list + share_directory"]
+        AdminFns["User & group management"]
+        TokenFns["Machine token create / list / revoke / rotate"]
+    end
+
+    subgraph Data["Storage"]
+        DDBSecrets[("DynamoDB<br/>RunaVault_passwords")]
+        DDBTokens[("DynamoDB<br/>RunaVault_machine_tokens")]
+        DDBAudit[("DynamoDB<br/>RunaVault_audit_log")]
+        KMS["KMS Key<br/>(encrypt / decrypt)"]
+    end
+
+    Browser -- "static assets" --> CF --> S3
+    Browser -- "sign in" --> UserPool
+    Browser -- "ID token" --> IdPool
+    IdPool -- "temporary AWS credentials" --> KMS
+    Browser == "client-side Encrypt/Decrypt" ==> KMS
+
+    Browser -- "Bearer: Cognito ID token" --> Routes
+    CLI -- "runa login: Cognito ID token" --> Routes
+    CLI -- "RUNA_TOKEN: rv_live_... machine token" --> Routes
+
+    Routes --> Authorizer
+    Authorizer -- "verify signature via JWKS" --> UserPool
+    Authorizer -- "hash + lookup" --> DDBTokens
+
+    Routes --> SecretFns
+    Routes --> AdminFns
+    Routes --> TokenFns
+
+    SecretFns --> DDBSecrets
+    SecretFns == "server-side decrypt<br/>(CLI/machine-token reads only)" ==> KMS
+    SecretFns -. "audit (no secret/token values)" .-> DDBAudit
+    AdminFns --> UserPool
+    TokenFns --> DDBTokens
+    TokenFns -. "audit" .-> DDBAudit
+```
+
+Solid double arrows (`==>`) mark paths where a **plaintext secret value** briefly exists; everything else only ever handles ciphertext, tokens, or metadata. See [`docs/machine-authentication.md`](docs/machine-authentication.md) for the full request flow, including how machine-token scope/path/IP restrictions are enforced.
 
 ## Features
 
