@@ -12,6 +12,76 @@ import "./App.css";
 import { copyToClipboard } from "./ClipboardUtils";
 import { useAppContext } from './AppContext';
 
+const parseSite = (site, subdirectory) => {
+  const parts = site.split('#');
+  const baseSite = parts[0];
+  const dir = subdirectory || (parts[1] && parts[1] !== parts[parts.length - 1] ? parts[1] : "");
+  return { baseSite, displaySubdirectory: dir };
+};
+
+// Parses stored password data and keeps the secrets visible in the current view, favorites first.
+const prepareSecrets = (allSecrets, { mode, group, userId }) => {
+  const parsedSecrets = allSecrets.map(secret => {
+    let parsedPassword;
+    if (typeof secret.password === 'string') {
+      try {
+        parsedPassword = JSON.parse(secret.password);
+      } catch (e) {
+        console.error(`Failed to parse password string for ${secret.site}:`, e);
+        parsedPassword = { encryptedPassword: secret.password, sharedWith: { users: [], groups: [] } };
+      }
+    } else if (typeof secret.password === 'object' && secret.password !== null) {
+      parsedPassword = {
+        ...secret.password,
+        sharedWith: {
+          users: secret.password.sharedWith?.users || [],
+          groups: secret.password.sharedWith?.groups || [],
+          roles: secret.password.sharedWith?.roles || {}
+        }
+      };
+    } else {
+      console.error(`Invalid password format for ${secret.site}:`, secret.password);
+      parsedPassword = { encryptedPassword: '', sharedWith: { users: [], groups: [], roles: {} } };
+    }
+
+    const shared_with = {
+      users: secret.shared_with?.users || [],
+      groups: secret.shared_with?.groups || [],
+      roles: secret.shared_with?.roles || {}
+    };
+
+    const { baseSite, displaySubdirectory } = parseSite(secret.site, secret.subdirectory);
+
+    return {
+      ...secret,
+      parsedPassword,
+      shared_with,
+      baseSite, 
+      displaySubdirectory
+    };
+  });
+
+  let filteredSecrets;
+
+  if (mode === "sharedWithMe") {
+    filteredSecrets = parsedSecrets.filter(secret => {
+      const isSharedWithUser = secret.shared_with?.users?.includes(userId);
+      const notOwnedByMe = !secret.owned_by_me;
+      return isSharedWithUser && notOwnedByMe;
+    });
+  } else if (group) {
+    filteredSecrets = parsedSecrets.filter(secret =>
+      secret.shared_with?.groups?.includes(group)
+    );
+  } else {
+    filteredSecrets = parsedSecrets.filter(secret =>
+      secret.owned_by_me
+    );
+  }
+
+  return filteredSecrets.sort((a, b) => (b.favorite || 0) - (a.favorite || 0));
+};
+
 const formatTags = (tags) => {
   if (!tags) return "N/A";
   if (tags.length === 1 && tags[0] === "NONE") return "";
@@ -81,13 +151,6 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     }
   }, [idToken]);
 
-  const parseSite = (site, subdirectory) => {
-    const parts = site.split('#');
-    const baseSite = parts[0];
-    const dir = subdirectory || (parts[1] && parts[1] !== parts[parts.length - 1] ? parts[1] : "");
-    return { baseSite, displaySubdirectory: dir };
-  };
-
   const handleSearchChange = (e) => {
     setError(null);
     setSearchQuery(e.target.value);
@@ -144,68 +207,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
         }
       }
 
-      const allSecrets = data.secrets || [];
-
-      const parsedSecrets = allSecrets.map(secret => {
-        let parsedPassword;
-        if (typeof secret.password === 'string') {
-          try {
-            parsedPassword = JSON.parse(secret.password);
-          } catch (e) {
-            console.error(`Failed to parse password string for ${secret.site}:`, e);
-            parsedPassword = { encryptedPassword: secret.password, sharedWith: { users: [], groups: [] } };
-          }
-        } else if (typeof secret.password === 'object' && secret.password !== null) {
-          parsedPassword = {
-            ...secret.password,
-            sharedWith: {
-              users: secret.password.sharedWith?.users || [],
-              groups: secret.password.sharedWith?.groups || [],
-              roles: secret.password.sharedWith?.roles || {}
-            }
-          };
-        } else {
-          console.error(`Invalid password format for ${secret.site}:`, secret.password);
-          parsedPassword = { encryptedPassword: '', sharedWith: { users: [], groups: [], roles: {} } };
-        }
-
-        const shared_with = {
-          users: secret.shared_with?.users || [],
-          groups: secret.shared_with?.groups || [],
-          roles: secret.shared_with?.roles || {}
-        };
-
-        const { baseSite, displaySubdirectory } = parseSite(secret.site, secret.subdirectory);
-
-        return {
-          ...secret,
-          parsedPassword,
-          shared_with,
-          baseSite, 
-          displaySubdirectory
-        };
-      });
-
-      let filteredSecrets;
-      const userId = getUserIdFromToken(idToken);
-
-      if (mode === "sharedWithMe") {
-        filteredSecrets = parsedSecrets.filter(secret => {
-          const isSharedWithUser = secret.shared_with?.users?.includes(userId);
-          const notOwnedByMe = !secret.owned_by_me;
-          return isSharedWithUser && notOwnedByMe;
-        });
-      } else if (group) {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.shared_with?.groups?.includes(group)
-        );
-      } else {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.owned_by_me
-        );
-      }
-
-      const sortedSecrets = filteredSecrets.sort((a, b) => (b.favorite || 0) - (a.favorite || 0));
+      const sortedSecrets = prepareSecrets(data.secrets || [], { mode, group, userId: getUserIdFromToken(idToken) });
       setSecretsCache(prev => ({ ...prev, [cacheKey]: sortedSecrets }));
       setFilteredSecrets(sortedSecrets);
     } catch (err) {
@@ -273,69 +275,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     const cacheKey = mode === "sharedWithMe" ? "sharedWithMe" : group ? `group_${group}` : "mySecrets";
     
     if (secretsData && secretsCache[cacheKey] === undefined) {
-      const data = secretsData;
-      const allSecrets = data.secrets || [];
-
-      const parsedSecrets = allSecrets.map(secret => {
-        let parsedPassword;
-        if (typeof secret.password === 'string') {
-          try {
-            parsedPassword = JSON.parse(secret.password);
-          } catch (e) {
-            console.error(`Failed to parse password string for ${secret.site}:`, e);
-            parsedPassword = { encryptedPassword: secret.password, sharedWith: { users: [], groups: [] } };
-          }
-        } else if (typeof secret.password === 'object' && secret.password !== null) {
-          parsedPassword = {
-            ...secret.password,
-            sharedWith: {
-              users: secret.password.sharedWith?.users || [],
-              groups: secret.password.sharedWith?.groups || [],
-              roles: secret.password.sharedWith?.roles || {}
-            }
-          };
-        } else {
-          console.error(`Invalid password format for ${secret.site}:`, secret.password);
-          parsedPassword = { encryptedPassword: '', sharedWith: { users: [], groups: [], roles: {} } };
-        }
-
-        const shared_with = {
-          users: secret.shared_with?.users || [],
-          groups: secret.shared_with?.groups || [],
-          roles: secret.shared_with?.roles || {}
-        };
-
-        const { baseSite, displaySubdirectory } = parseSite(secret.site, secret.subdirectory);
-
-        return {
-          ...secret,
-          parsedPassword,
-          shared_with,
-          baseSite, 
-          displaySubdirectory
-        };
-      });
-
-      let filteredSecrets;
-      const userId = getUserIdFromToken(idToken);
-
-      if (mode === "sharedWithMe") {
-        filteredSecrets = parsedSecrets.filter(secret => {
-          const isSharedWithUser = secret.shared_with?.users?.includes(userId);
-          const notOwnedByMe = !secret.owned_by_me;
-          return isSharedWithUser && notOwnedByMe;
-        });
-      } else if (group) {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.shared_with?.groups?.includes(group)
-        );
-      } else {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.owned_by_me
-        );
-      }
-
-      const sortedSecrets = filteredSecrets.sort((a, b) => (b.favorite || 0) - (a.favorite || 0));
+      const sortedSecrets = prepareSecrets(secretsData.secrets || [], { mode, group, userId: getUserIdFromToken(idToken) });
       setSecretsCache(prev => ({ ...prev, [cacheKey]: sortedSecrets }));
       setFilteredSecrets(sortedSecrets);
       setLoading(false);
@@ -468,6 +408,21 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       return;
     }
 
+    const { encryptedData, encryptionContext } = getDecryptionInput(secret);
+
+    if (!encryptedData) {
+      setError("No encrypted password available for this context");
+      return;
+    }
+
+    const password = await decryptPassword(encryptedData, idToken, encryptionContext);
+    if (password) {
+      setVisiblePasswords(prev => ({ ...prev, [secretId]: password }));
+    }
+  };
+
+  // Owners decrypt the main ciphertext; recipients use the copy encrypted for their group or user.
+  const getDecryptionInput = (secret) => {
     let encryptedData = secret.parsedPassword.encryptedPassword;
     let encryptionContext = { purpose: "password-manager" };
     const userId = getUserIdFromToken(idToken);
@@ -489,15 +444,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       }
     }
 
-    if (!encryptedData) {
-      setError("No encrypted password available for this context");
-      return;
-    }
-
-    const password = await decryptPassword(encryptedData, idToken, encryptionContext);
-    if (password) {
-      setVisiblePasswords(prev => ({ ...prev, [secretId]: password }));
-    }
+    return { encryptedData, encryptionContext };
   };
 
   const handleActivationKey = (handler) => (e) => {
@@ -520,26 +467,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     } else if (field === "username") {
       textToCopy = secret.username;
     } else {
-      let encryptedData = secret.parsedPassword.encryptedPassword;
-      let encryptionContext = { purpose: "password-manager" };
-      const userId = getUserIdFromToken(idToken);
-      const isOwner = secret.user_id === userId;
-
-      if (!isOwner) {
-        if (group && secret.parsedPassword.sharedWith?.groups?.length > 0) {
-          const groupMatch = secret.parsedPassword.sharedWith.groups.find(g => g.groupId === group);
-          if (groupMatch) {
-            encryptedData = groupMatch.encryptedPassword;
-            encryptionContext = { groupId: group, purpose: "password-manager" };
-          }
-        } else if (secret.parsedPassword.sharedWith?.users?.length > 0) {
-          const userMatch = secret.parsedPassword.sharedWith.users.find(u => u.userId === userId);
-          if (userMatch) {
-            encryptedData = userMatch.encryptedPassword;
-            encryptionContext = { userId: userId, purpose: "password-manager" };
-          }
-        }
-      }
+      const { encryptedData, encryptionContext } = getDecryptionInput(secret);
 
       if (!encryptedData) {
         setError("No encrypted password available for this context");
