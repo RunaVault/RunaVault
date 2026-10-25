@@ -8,19 +8,46 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   pull-requests: read
 
 jobs:
   Analysis:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history so SonarCloud can attribute new code and blame correctly
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+
+      - name: Run backend tests with coverage
+        working-directory: backend
+        run: |
+          npm ci --ignore-scripts
+          npm test
+
+      - name: Make coverage paths relative to the repository root
+        if: ${{ !cancelled() && hashFiles('backend/coverage/lcov.info') != '' }}
+        run: sed -i 's#^SF:#SF:backend/#' backend/coverage/lcov.info
+
       - name: Analyze with SonarCloud
-        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8
+        # Still analyze when tests fail so findings are reported; test.yml gates on test results
+        if: ${{ !cancelled() }}
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=runavault_RunaVault
+            -Dsonar.projectKey=RunaVault_RunaVault
             -Dsonar.organization=runavault
-            -Dsonar.test.exclusions=**/__tests__/**
-            -Dsonar.verbose=true
+            -Dsonar.sources=.
+            -Dsonar.tests=backend/__tests__
+            -Dsonar.exclusions=**/node_modules/**,**/coverage/**,frontend/build/**,backend/__tests__/**
+            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
+            -Dsonar.coverage.exclusions=frontend/**,terraform/**,.github/**
