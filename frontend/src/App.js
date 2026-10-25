@@ -20,6 +20,7 @@ import initBackgroundAnimation from "./BackgroundAnimation";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSignOutAlt, faUsersCog, faPlus, faMoon, faSun, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import "./App.css";
+import { copyToClipboard } from "./ClipboardUtils";
 import QRCode from 'qrcode';
 import { AppProvider, useAppContext } from './AppContext';
 
@@ -509,28 +510,10 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
     }
   }, [challenge, secretCode, session]);
 
-  const copyWithTextarea = (text) => {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = 0;
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      if (!document.execCommand('copy')) throw new Error("Copy command was rejected");
-    } finally {
-      document.body.removeChild(textarea);
-    }
-  };
-
   const copySecretCode = async () => {
     if (secretCode) {
       try {
-        try {
-          await navigator.clipboard.writeText(secretCode);
-        } catch {
-          copyWithTextarea(secretCode);
-        }
+        await copyToClipboard(secretCode);
 
         setCopyMessage("Code copied to clipboard!");
         setTimeout(() => setCopyMessage(""), 3000);
@@ -1319,7 +1302,7 @@ function App() {
         if (tag && tag !== "NONE") tagSet.add(tag);
       });
     });
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b)).map(tag => ({ value: tag, label: tag }));
+    return Array.from(tagSet).sort((a, b) => Number(a > b) - Number(a < b)).map(tag => ({ value: tag, label: tag }));
   }, [secrets]);
 
   useEffect(() => {

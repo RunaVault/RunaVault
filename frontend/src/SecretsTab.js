@@ -9,6 +9,7 @@ import { encryptPassword, decryptPassword, generateSecurePassword } from "./Cryp
 import CreatableSelect from 'react-select/creatable';
 import Select from 'react-select';
 import "./App.css";
+import { copyToClipboard } from "./ClipboardUtils";
 import { useAppContext } from './AppContext';
 
 function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSecretsData }) {
@@ -495,6 +496,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
   };
 
   const handleActivationKey = (handler) => (e) => {
+    if (e.target !== e.currentTarget) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handler(e);
@@ -551,22 +553,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     if (!textToCopy) return;
 
     try {
-      const textarea = document.createElement('textarea');
-      textarea.value = textToCopy;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = 0;
-      document.body.appendChild(textarea);
-      
-      textarea.select();
-      
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-      } catch (err) {
-        document.execCommand('copy');
-      }
-      
-      document.body.removeChild(textarea);
-      
+      await copyToClipboard(textToCopy);
       setCopyNotification({ field, site: secretId });
       setTimeout(() => setCopyNotification(null), 2500);
     } catch (err) {
@@ -1297,6 +1284,8 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                           </td>
                           <td
                             onClick={(e) => handleCopy("username", secret, e)}
+                            onKeyDown={handleActivationKey((e) => handleCopy("username", secret, e))}
+                            tabIndex={0}
                             className="clickable-cell"
                             title={`${secret.username}\nClick to copy`}
                           >
@@ -1495,6 +1484,8 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                                 </td>
                                 <td
                                   onClick={(e) => handleCopy("username", secret, e)}
+                                  onKeyDown={handleActivationKey((e) => handleCopy("username", secret, e))}
+                                  tabIndex={0}
                                   className="clickable-cell"
                                   title={`${secret.username}\nClick to copy`}
                                 >
