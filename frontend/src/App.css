@@ -1351,7 +1351,7 @@ input:-webkit-autofill {
 .dark-mode .form-control:focus {
   color: #e4e4e4;
   box-shadow: none;
-  border: 1px solid #e4e4e4;;
+  border: 1px solid #e4e4e4;
 }
 
 .dark-mode .basic-multi-select:focus {
@@ -1855,7 +1855,7 @@ input:-webkit-autofill {
 }
 
 .secrets-table .table-fixed {
-  border: 0px solid #ebebec;;
+  border: 0px solid #ebebec;
   margin-bottom: 0rem;
 }
 

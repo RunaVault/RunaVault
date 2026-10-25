@@ -6,7 +6,7 @@ const AWS_REGION = import.meta.env.VITE_AWS_REGION;
 const KMS_KEY_ID = import.meta.env.VITE_KMS_KEY_ID;
 
 export const isCryptoSupported = () => {
-  return window.crypto && window.crypto.subtle;
+  return window.crypto?.subtle;
 };
 
 const PASSWORD_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
@@ -141,7 +141,7 @@ export const decryptPassword = async (encryptedData, idToken, encryptionContext 
     const userId = tokenPayload.sub;
     let userGroups = tokenPayload["cognito:groups"] || [];
     if (typeof userGroups === "string") {
-      userGroups = userGroups.split(" ").filter(g => g);
+      userGroups = userGroups.split(" ").filter(Boolean);
     } else if (!Array.isArray(userGroups)) {
       userGroups = [];
     }

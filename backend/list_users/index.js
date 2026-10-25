@@ -11,8 +11,7 @@ const cognito = new CognitoIdentityProviderClient({ region: poolData.region });
 export const handler = async (event) => {
   try {
     const token = getAuthToken(event);
-    const decoded = await verifyToken(token);
-    const userId = decoded.sub;
+    await verifyToken(token);
 
     const params = {
       UserPoolId: poolData.userPoolId,
@@ -35,12 +34,6 @@ export const handler = async (event) => {
           const email = user.Attributes.find((attr) => attr.Name === "email")?.Value || "No email";
           const given_name = user.Attributes.find((attr) => attr.Name === "given_name")?.Value || "";
           const family_name = user.Attributes.find((attr) => attr.Name === "family_name")?.Value || "";
-          
-          let label = email;
-          if (given_name || family_name) {
-            const fullName = `${given_name} ${family_name}`.trim();
-            label = `${fullName} (${email})`;
-          }
           
           return {
             username: user.Username,

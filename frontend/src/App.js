@@ -402,7 +402,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
   const { darkMode } = useTheme();
   
   const [secretCode, setSecretCode] = useState("");
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const canvasRef = useRef(null);
   
@@ -427,7 +426,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
           await QRCode.toCanvas(canvasRef.current, otpauth, { width: 200 });
         }
         
-        setQrCodeUrl(otpauth);
       }
       
       if (response.Session) {
@@ -472,7 +470,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
             
             setVerificationCode("");
             setSecretCode("");
-            setQrCodeUrl("");
             setChallenge(null);
           } else if (challengeResponse.ChallengeName) {
             setChallenge(challengeResponse.ChallengeName);
@@ -487,7 +484,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
               setVerificationCode("");
               setSession(null);
               setSecretCode("");
-              setQrCodeUrl("");
               setMessage("");
             }, 3000);
           }
@@ -786,7 +782,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
                     placeholder="Enter 6-digit code from app"
                     value={verificationCode}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '').substring(0, 6);
+                      const value = e.target.value.replace(/\D/g, '').substring(0, 6);
                       setVerificationCode(value);
                       setValidationErrors(prev => ({...prev, verificationCode: ""}));
                     }}
@@ -933,24 +929,8 @@ function App() {
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [idToken, setIdToken] = useState(null);
-  const [user, setUser] = useState(null);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showMfaSetup, setShowMfaSetup] = useState(false);
-  const [mfaSecret, setMfaSecret] = useState(null);
-  const [mfaQrCode, setMfaQrCode] = useState(null);
-  const [mfaVerificationCode, setMfaVerificationCode] = useState("");
-  const [mfaError, setMfaError] = useState("");
-  const [mfaSuccess, setMfaSuccess] = useState("");
-  const [sharedWithMeCount, setSharedWithMeCount] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState(null);
-  const [refreshSuccess, setRefreshSuccess] = useState(false);
-  const { secrets, fetchSecrets, fetchUsers, updateSecrets, resetState } = useAppContext();
+  const { secrets, updateSecrets, resetState } = useAppContext();
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
-  const [showExpandButton, setShowExpandButton] = useState(false);
-  const groupTabsRef = useRef(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -961,8 +941,8 @@ function App() {
       const storedTokenTimestamp = localStorage.getItem('tokenTimestamp');
       if (storedAccessToken && storedIdToken && storedRefreshToken && storedExpiresIn && storedTokenTimestamp) {
         const currentTime = Math.floor(Date.now() / 1000);
-        const tokenAge = currentTime - parseInt(storedTokenTimestamp);
-        const expiresIn = parseInt(storedExpiresIn);
+        const tokenAge = currentTime - Number.parseInt(storedTokenTimestamp, 10);
+        const expiresIn = Number.parseInt(storedExpiresIn, 10);
 
         if (tokenAge >= expiresIn - 300) {
           try {
@@ -991,8 +971,6 @@ function App() {
               localStorage.setItem('expiresIn', response.AuthenticationResult.ExpiresIn.toString());
               localStorage.setItem('tokenTimestamp', Math.floor(Date.now() / 1000).toString());
               
-              setAccessToken(newTokens.access_token);
-              setIdToken(newTokens.id_token);
               setUserTokens(newTokens);
               
               const userCommand = new GetUserCommand({
@@ -1017,8 +995,6 @@ function App() {
             cleanAndSignOut();
           }
         } else {
-          setAccessToken(storedAccessToken);
-          setIdToken(storedIdToken);
           setUserTokens({
             id_token: storedIdToken,
             access_token: storedAccessToken,
@@ -1075,8 +1051,8 @@ function App() {
           setIsLoading(true);
           
           const currentTime = Math.floor(Date.now() / 1000);
-          const tokenAge = currentTime - parseInt(tokenTimestamp);
-          const tokenExpiresIn = parseInt(expiresIn);
+          const tokenAge = currentTime - Number.parseInt(tokenTimestamp, 10);
+          const tokenExpiresIn = Number.parseInt(expiresIn, 10);
           
           if (tokenAge >= tokenExpiresIn - 300) {
             console.log("Token expired or about to expire, refreshing...");
@@ -1217,22 +1193,8 @@ function App() {
     setUserTokens(null);
     setUserInfo(null);
     setAuthError(null);
-    setAccessToken(null);
-    setIdToken(null);
-    setUser(null);
     setShowAdminPanel(false);
     setShowChangePassword(false);
-    setShowForgotPassword(false);
-    setShowMfaSetup(false);
-    setMfaSecret(null);
-    setMfaQrCode(null);
-    setMfaVerificationCode("");
-    setMfaError("");
-    setMfaSuccess("");
-    setSharedWithMeCount(0);
-    setIsRefreshing(false);
-    setRefreshError(null);
-    setRefreshSuccess(false);
     resetState();
   };
 
@@ -1304,13 +1266,6 @@ function App() {
     });
     return Array.from(tagSet).sort((a, b) => Number(a > b) - Number(a < b)).map(tag => ({ value: tag, label: tag }));
   }, [secrets]);
-
-  useEffect(() => {
-    if (activeTab === "secrets" && selectedGroup) {
-      if (secrets) {
-      }
-    }
-  }, [selectedGroup, activeTab, secrets]);
 
   const resetSecretsData = () => {
     resetState();
@@ -1386,13 +1341,9 @@ function App() {
   }, [isAuthenticated]);
 
   const refreshSessionAndData = async () => {
-    setIsRefreshing(true);
-    setRefreshError(null);
-    setRefreshSuccess(false);
     try {
       const success = await refreshTokenAndUserInfo();
       if (success) {
-        setRefreshSuccess(true);
         const groups = getUserGroups();
         setUserGroups(groups);
         resetSecretsData();
@@ -1400,10 +1351,8 @@ function App() {
       }
       return success;
     } catch (err) {
-      setRefreshError(err.message);
+      console.error("Session refresh failed:", err);
       return false;
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -1421,25 +1370,6 @@ function App() {
   }, [userGroups, lastGroupRefresh]);
 
 
-  const checkTokenValidity = async () => {
-    if (!userTokens?.access_token) {
-      cleanAndSignOut();
-      return false;
-    }
-
-    try {
-      const command = new GetUserCommand({
-        AccessToken: userTokens.access_token
-      });
-      
-      await cognitoClient.send(command);
-      return true;
-    } catch (error) {
-      console.error("Token validation failed:", error);
-      cleanAndSignOut();
-      return false;
-    }
-  };
 
 
   if (isLoading) {

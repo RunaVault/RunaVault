@@ -13,7 +13,7 @@ import { copyToClipboard } from "./ClipboardUtils";
 import { useAppContext } from './AppContext';
 
 function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSecretsData }) {
-  const { users, fetchUsers, secrets, fetchSecrets, updateSecrets } = useAppContext();
+  const { users, fetchUsers, fetchSecrets } = useAppContext();
   const [secretsCache, setSecretsCache] = useState({});
   const [filteredSecrets, setFilteredSecrets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,6 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
   const [sortField, setSortField] = useState("favorite");
   const [sortDirection, setSortDirection] = useState("desc");
   const [pendingFetch, setPendingFetch] = useState(false);
-  const [selectedNotes, setSelectedNotes] = useState(null);
 
   useEffect(() => {
     if (!idToken) {
@@ -436,8 +435,8 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       filtered = filtered.filter(secret =>
         secret.baseSite.toLowerCase().includes(searchQuery.toLowerCase()) ||
         secret.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (secret.notes && secret.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (secret.tags && secret.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+        (secret.notes?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (secret.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
       );
     }
     
@@ -1151,9 +1150,9 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     const lowercasedQuery = query.toLowerCase().trim();
     const filtered = availableUsers.filter(user =>
       user.label.toLowerCase().includes(lowercasedQuery) ||
-      (user.email && user.email.toLowerCase().includes(lowercasedQuery)) ||
-      (user.given_name && user.given_name.toLowerCase().includes(lowercasedQuery)) ||
-      (user.family_name && user.family_name.toLowerCase().includes(lowercasedQuery))
+      user.email?.toLowerCase().includes(lowercasedQuery) ||
+      user.given_name?.toLowerCase().includes(lowercasedQuery) ||
+      user.family_name?.toLowerCase().includes(lowercasedQuery)
     );
     setFilteredAvailableUsers(filtered);
   }, [availableUsers]);
@@ -1184,7 +1183,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
         <input
           type="text"
           value={searchQuery}
-          autocomplete="off"
+          autoComplete="off"
           onChange={handleSearchChange}
           placeholder="Search by site, username, tags or notes..."
           className="form-control search-input"
@@ -1317,7 +1316,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                           </td>
                           <td>
                             <div className="cell-content">
-                              {secret.tags && secret.tags.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
+                              {secret.tags?.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
                             </div>
                           </td>
                           {(group || mode === "sharedWithMe") && (
@@ -1517,7 +1516,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                                 </td>
                                 <td>
                                   <div className="cell-content">
-                                    {secret.tags && secret.tags.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
+                                    {secret.tags?.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
                                   </div>
                                 </td>
                                 {(group || mode === "sharedWithMe") && (
@@ -1635,7 +1634,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                   type={showPassword ? "text" : "password"}
                   id="edit-password"
                   value={editPassword}
-                  autocomplete="new-password"
+                  autoComplete="new-password"
                   onChange={(e) => setEditPassword(e.target.value)}
                   placeholder="Enter new password"
                   className="form-control"
@@ -1741,7 +1740,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
               <label htmlFor="edit-subdirectory" className="form-label">Subdirectory (optional):</label>
               <input
                 type="text"
-                maxlength="50"
+                maxLength="50"
                 id="edit-subdirectory"
                 value={editSubdirectory === "default" ? "" : editSubdirectory}
                 onChange={(e) => setEditSubdirectory(e.target.value)}

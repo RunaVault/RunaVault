@@ -87,7 +87,6 @@ export const handler = async (event) => {
       console.log('Processing site:', site.split('#')[0]);
       const siteParts = site.split('#');
 
-      const lastPart = siteParts[siteParts.length - 1];
       let baseCompositeKey;
 
       if (siteParts.length >= 3) {
@@ -143,7 +142,7 @@ export const handler = async (event) => {
         encrypted: { BOOL: baseItem.encrypted?.BOOL ?? true },
         shared_with_roles: {
           M: {
-            ...((baseItem.shared_with_roles?.M || {})),
+            ...baseItem.shared_with_roles?.M,
             ...(Object.fromEntries(Object.entries(validatedSharedWith.roles || {}).map(([k, v]) => [k, { S: v }])))
           }
         },
@@ -152,7 +151,7 @@ export const handler = async (event) => {
         notes: { S: baseItem.notes?.S ?? "" },
         tags: { SS: baseItem.tags?.SS || ["NONE"] },
         favorite: { BOOL: baseItem.favorite?.BOOL ?? false },
-        version: { N: (parseInt(baseItem.version?.N || "1") + 1).toString() },
+        version: { N: (Number.parseInt(baseItem.version?.N || "1", 10) + 1).toString() },
         password_id: { S: passwordId },
       };
 
@@ -267,7 +266,7 @@ export const handler = async (event) => {
         notes: baseDynamoItem.notes.S,
         tags: baseDynamoItem.tags.SS.filter(tag => tag !== "NONE"),
         last_modified: lastModified,
-        version: parseInt(baseDynamoItem.version.N)
+        version: Number.parseInt(baseDynamoItem.version.N, 10)
       });
     }
 

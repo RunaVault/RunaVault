@@ -108,7 +108,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
     if (pwd.length >= 16) score++;
     if (/[a-z]/.test(pwd)) score++;
     if (/[A-Z]/.test(pwd)) score++;
-    if (/[0-9]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
     if (/[^a-zA-Z0-9]/.test(pwd)) score++;
     if (score <= 2) return { label: "Weak", level: 1 };
     if (score <= 4) return { label: "Fair", level: 2 };
@@ -222,9 +222,9 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
     const lowercasedQuery = query.toLowerCase().trim();
     const filtered = availableUsers.filter(user => 
       user.label.toLowerCase().includes(lowercasedQuery) ||
-      (user.email && user.email.toLowerCase().includes(lowercasedQuery)) || 
-      (user.given_name && user.given_name.toLowerCase().includes(lowercasedQuery)) || 
-      (user.family_name && user.family_name.toLowerCase().includes(lowercasedQuery)) 
+      user.email?.toLowerCase().includes(lowercasedQuery) || 
+      user.given_name?.toLowerCase().includes(lowercasedQuery) || 
+      user.family_name?.toLowerCase().includes(lowercasedQuery) 
     );
     
     setFilteredAvailableUsers(filtered);
