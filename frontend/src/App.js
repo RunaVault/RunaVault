@@ -32,6 +32,16 @@ const ValidatedInput = ({ error, ...inputProps }) => (
   </div>
 );
 
+// Value, error and onChange for a ValidatedInput; editing a field clears its error.
+const bindFieldProps = (validationErrors, setValidationErrors) => (name, value, setValue) => ({
+  value,
+  error: validationErrors[name],
+  onChange: (e) => {
+    setValue(e.target.value);
+    setValidationErrors(prev => ({...prev, [name]: ""}));
+  },
+});
+
 const cognitoClient = new CognitoIdentityProviderClient({
   region: import.meta.env.VITE_AWS_REGION,
 });
@@ -47,6 +57,7 @@ const ChangePasswordForm = ({ accessToken, onSuccess, onCancel }) => {
     newPassword: "",
     confirmPassword: ""
   });
+  const fieldProps = bindFieldProps(validationErrors, setValidationErrors);
 
   const validateForm = () => {
     const errors = {};
@@ -104,36 +115,9 @@ const ChangePasswordForm = ({ accessToken, onSuccess, onCancel }) => {
         </div>
       )}
       <form onSubmit={handleSubmit}>
-        <ValidatedInput
-          type="password"
-          placeholder="Old password"
-          value={oldPassword}
-          onChange={(e) => {
-            setOldPassword(e.target.value);
-            setValidationErrors(prev => ({...prev, oldPassword: ""}));
-          }}
-          error={validationErrors.oldPassword}
-        />
-        <ValidatedInput
-          type="password"
-          placeholder="New password"
-          value={newPassword}
-          onChange={(e) => {
-            setNewPassword(e.target.value);
-            setValidationErrors(prev => ({...prev, newPassword: ""}));
-          }}
-          error={validationErrors.newPassword}
-        />
-        <ValidatedInput
-          type="password"
-          placeholder="Confirm new password"
-          value={confirmPassword}
-          onChange={(e) => {
-            setConfirmPassword(e.target.value);
-            setValidationErrors(prev => ({...prev, confirmPassword: ""}));
-          }}
-          error={validationErrors.confirmPassword}
-        />
+        <ValidatedInput type="password" placeholder="Old password" {...fieldProps("oldPassword", oldPassword, setOldPassword)} />
+        <ValidatedInput type="password" placeholder="New password" {...fieldProps("newPassword", newPassword, setNewPassword)} />
+        <ValidatedInput type="password" placeholder="Confirm new password" {...fieldProps("confirmPassword", confirmPassword, setConfirmPassword)} />
         <div className="d-flex justify-content-center gap-3">
           <button type="submit" className="btn btn-primary">
             Save
@@ -170,6 +154,7 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
     newPassword: "",
     confirmPassword: ""
   });
+  const fieldProps = bindFieldProps(validationErrors, setValidationErrors);
   const { darkMode } = useTheme();
 
   const validateForm = () => {
@@ -276,16 +261,7 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
 
         {step === 1 ? (
           <form onSubmit={handleRequestCode} className="login-form">
-            <ValidatedInput
-              type="text"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setValidationErrors(prev => ({...prev, email: ""}));
-              }}
-              error={validationErrors.email}
-            />
+            <ValidatedInput type="text" placeholder="Email" {...fieldProps("email", email, setEmail)} />
             <div className="d-flex justify-content-center gap-3">
               <button type="submit" className="btn btn-primary">
                 Send Code
@@ -303,36 +279,9 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
           </form>
         ) : (
           <form onSubmit={handleConfirmPassword} className="login-form">
-            <ValidatedInput
-              type="text"
-              placeholder="Verification code"
-              value={verificationCode}
-              onChange={(e) => {
-                setVerificationCode(e.target.value);
-                setValidationErrors(prev => ({...prev, verificationCode: ""}));
-              }}
-              error={validationErrors.verificationCode}
-            />
-            <ValidatedInput
-              type="password"
-              placeholder="New password"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setValidationErrors(prev => ({...prev, newPassword: ""}));
-              }}
-              error={validationErrors.newPassword}
-            />
-            <ValidatedInput
-              type="password"
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setValidationErrors(prev => ({...prev, confirmPassword: ""}));
-              }}
-              error={validationErrors.confirmPassword}
-            />
+            <ValidatedInput type="text" placeholder="Verification code" {...fieldProps("verificationCode", verificationCode, setVerificationCode)} />
+            <ValidatedInput type="password" placeholder="New password" {...fieldProps("newPassword", newPassword, setNewPassword)} />
+            <ValidatedInput type="password" placeholder="Confirm password" {...fieldProps("confirmPassword", confirmPassword, setConfirmPassword)} />
             <div className="d-flex justify-content-center gap-3">
               <button type="submit" className="btn btn-primary">
                 Change Password
@@ -372,6 +321,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
     confirmNewPassword: "",
     verificationCode: ""
   });
+  const fieldProps = bindFieldProps(validationErrors, setValidationErrors);
   const { darkMode } = useTheme();
   
   const [secretCode, setSecretCode] = useState("");
@@ -773,66 +723,19 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
           ) : (
             <>
               {(!challenge || challenge === "NEW_PASSWORD_REQUIRED") && (
-                <ValidatedInput
-                  type="text"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setValidationErrors(prev => ({...prev, email: ""}));
-                  }}
-                  disabled={challenge === "NEW_PASSWORD_REQUIRED"}
-                  error={validationErrors.email}
-                />
+                <ValidatedInput type="text" placeholder="Email" disabled={challenge === "NEW_PASSWORD_REQUIRED"} {...fieldProps("email", email, setEmail)} />
               )}
               {(!challenge || challenge === "NEW_PASSWORD_REQUIRED") && (
-                <ValidatedInput
-                  type="password"
-                  placeholder={challenge === "NEW_PASSWORD_REQUIRED" ? "Current password" : "Password"}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setValidationErrors(prev => ({...prev, password: ""}));
-                  }}
-                  disabled={challenge === "NEW_PASSWORD_REQUIRED"}
-                  error={validationErrors.password}
-                />
+                <ValidatedInput type="password" placeholder={challenge === "NEW_PASSWORD_REQUIRED" ? "Current password" : "Password"} disabled={challenge === "NEW_PASSWORD_REQUIRED"} {...fieldProps("password", password, setPassword)} />
               )}
               {challenge === "NEW_PASSWORD_REQUIRED" && (
                 <>
-                  <ValidatedInput
-                    type="password"
-                    placeholder="New password"
-                    value={newPassword}
-                    onChange={(e) => {
-                      setNewPassword(e.target.value);
-                      setValidationErrors(prev => ({...prev, newPassword: ""}));
-                    }}
-                    error={validationErrors.newPassword}
-                  />
-                  <ValidatedInput
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmNewPassword}
-                    onChange={(e) => {
-                      setConfirmNewPassword(e.target.value);
-                      setValidationErrors(prev => ({...prev, confirmNewPassword: ""}));
-                    }}
-                    error={validationErrors.confirmNewPassword}
-                  />
+                  <ValidatedInput type="password" placeholder="New password" {...fieldProps("newPassword", newPassword, setNewPassword)} />
+                  <ValidatedInput type="password" placeholder="Confirm new password" {...fieldProps("confirmNewPassword", confirmNewPassword, setConfirmNewPassword)} />
                 </>
               )}
               {(challenge === "SMS_MFA" || challenge === "SOFTWARE_TOKEN_MFA") && (
-                <ValidatedInput
-                  type="text"
-                  placeholder={challenge === "SMS_MFA" ? "SMS MFA code" : "Authenticator code"}
-                  value={mfaCode}
-                  onChange={(e) => {
-                    setMfaCode(e.target.value);
-                    setValidationErrors(prev => ({...prev, mfaCode: ""}));
-                  }}
-                  error={validationErrors.mfaCode}
-                />
+                <ValidatedInput type="text" placeholder={challenge === "SMS_MFA" ? "SMS MFA code" : "Authenticator code"} {...fieldProps("mfaCode", mfaCode, setMfaCode)} />
               )}
               <div className="d-flex justify-content-center gap-3">
                 <button type="submit" className="btn btn-primary">
