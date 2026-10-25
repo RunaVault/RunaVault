@@ -24,6 +24,14 @@ import { copyToClipboard } from "./ClipboardUtils";
 import QRCode from 'qrcode';
 import { AppProvider, useAppContext } from './AppContext';
 
+// Bootstrap input with its validation message; all other props go to the <input>.
+const ValidatedInput = ({ error, ...inputProps }) => (
+  <div className="mb-3">
+    <input {...inputProps} className={`form-control ${error ? 'is-invalid' : ''}`} />
+    {error && <div className="invalid-feedback">{error}</div>}
+  </div>
+);
+
 const cognitoClient = new CognitoIdentityProviderClient({
   region: import.meta.env.VITE_AWS_REGION,
 });
@@ -96,51 +104,36 @@ const ChangePasswordForm = ({ accessToken, onSuccess, onCancel }) => {
         </div>
       )}
       <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <input
-            type="password"
-            className={`form-control ${validationErrors.oldPassword ? 'is-invalid' : ''}`}
-            placeholder="Old password"
-            value={oldPassword}
-            onChange={(e) => {
-              setOldPassword(e.target.value);
-              setValidationErrors(prev => ({...prev, oldPassword: ""}));
-            }}
-          />
-          {validationErrors.oldPassword && (
-            <div className="invalid-feedback">{validationErrors.oldPassword}</div>
-          )}
-        </div>
-        <div className="mb-3">
-          <input
-            type="password"
-            className={`form-control ${validationErrors.newPassword ? 'is-invalid' : ''}`}
-            placeholder="New password"
-            value={newPassword}
-            onChange={(e) => {
-              setNewPassword(e.target.value);
-              setValidationErrors(prev => ({...prev, newPassword: ""}));
-            }}
-          />
-          {validationErrors.newPassword && (
-            <div className="invalid-feedback">{validationErrors.newPassword}</div>
-          )}
-        </div>
-        <div className="mb-3">
-          <input
-            type="password"
-            className={`form-control ${validationErrors.confirmPassword ? 'is-invalid' : ''}`}
-            placeholder="Confirm new password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              setValidationErrors(prev => ({...prev, confirmPassword: ""}));
-            }}
-          />
-          {validationErrors.confirmPassword && (
-            <div className="invalid-feedback">{validationErrors.confirmPassword}</div>
-          )}
-        </div>
+        <ValidatedInput
+          type="password"
+          placeholder="Old password"
+          value={oldPassword}
+          onChange={(e) => {
+            setOldPassword(e.target.value);
+            setValidationErrors(prev => ({...prev, oldPassword: ""}));
+          }}
+          error={validationErrors.oldPassword}
+        />
+        <ValidatedInput
+          type="password"
+          placeholder="New password"
+          value={newPassword}
+          onChange={(e) => {
+            setNewPassword(e.target.value);
+            setValidationErrors(prev => ({...prev, newPassword: ""}));
+          }}
+          error={validationErrors.newPassword}
+        />
+        <ValidatedInput
+          type="password"
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setValidationErrors(prev => ({...prev, confirmPassword: ""}));
+          }}
+          error={validationErrors.confirmPassword}
+        />
         <div className="d-flex justify-content-center gap-3">
           <button type="submit" className="btn btn-primary">
             Save
@@ -283,21 +276,16 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
 
         {step === 1 ? (
           <form onSubmit={handleRequestCode} className="login-form">
-            <div className="mb-3">
-              <input
-                type="text"
-                className={`form-control ${validationErrors.email ? 'is-invalid' : ''}`}
-                placeholder="Email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setValidationErrors(prev => ({...prev, email: ""}));
-                }}
-              />
-              {validationErrors.email && (
-                <div className="invalid-feedback">{validationErrors.email}</div>
-              )}
-            </div>
+            <ValidatedInput
+              type="text"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setValidationErrors(prev => ({...prev, email: ""}));
+              }}
+              error={validationErrors.email}
+            />
             <div className="d-flex justify-content-center gap-3">
               <button type="submit" className="btn btn-primary">
                 Send Code
@@ -315,51 +303,36 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
           </form>
         ) : (
           <form onSubmit={handleConfirmPassword} className="login-form">
-            <div className="mb-3">
-              <input
-                type="text"
-                className={`form-control ${validationErrors.verificationCode ? 'is-invalid' : ''}`}
-                placeholder="Verification code"
-                value={verificationCode}
-                onChange={(e) => {
-                  setVerificationCode(e.target.value);
-                  setValidationErrors(prev => ({...prev, verificationCode: ""}));
-                }}
-              />
-              {validationErrors.verificationCode && (
-                <div className="invalid-feedback">{validationErrors.verificationCode}</div>
-              )}
-            </div>
-            <div className="mb-3">
-              <input
-                type="password"
-                className={`form-control ${validationErrors.newPassword ? 'is-invalid' : ''}`}
-                placeholder="New password"
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value);
-                  setValidationErrors(prev => ({...prev, newPassword: ""}));
-                }}
-              />
-              {validationErrors.newPassword && (
-                <div className="invalid-feedback">{validationErrors.newPassword}</div>
-              )}
-            </div>
-            <div className="mb-3">
-              <input
-                type="password"
-                className={`form-control ${validationErrors.confirmPassword ? 'is-invalid' : ''}`}
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setValidationErrors(prev => ({...prev, confirmPassword: ""}));
-                }}
-              />
-              {validationErrors.confirmPassword && (
-                <div className="invalid-feedback">{validationErrors.confirmPassword}</div>
-              )}
-            </div>
+            <ValidatedInput
+              type="text"
+              placeholder="Verification code"
+              value={verificationCode}
+              onChange={(e) => {
+                setVerificationCode(e.target.value);
+                setValidationErrors(prev => ({...prev, verificationCode: ""}));
+              }}
+              error={validationErrors.verificationCode}
+            />
+            <ValidatedInput
+              type="password"
+              placeholder="New password"
+              value={newPassword}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setValidationErrors(prev => ({...prev, newPassword: ""}));
+              }}
+              error={validationErrors.newPassword}
+            />
+            <ValidatedInput
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setValidationErrors(prev => ({...prev, confirmPassword: ""}));
+              }}
+              error={validationErrors.confirmPassword}
+            />
             <div className="d-flex justify-content-center gap-3">
               <button type="submit" className="btn btn-primary">
                 Change Password
@@ -800,91 +773,66 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
           ) : (
             <>
               {(!challenge || challenge === "NEW_PASSWORD_REQUIRED") && (
-                <div className="mb-3">
-                  <input
-                    type="text"
-                    className={`form-control ${validationErrors.email ? 'is-invalid' : ''}`}
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setValidationErrors(prev => ({...prev, email: ""}));
-                    }}
-                    disabled={challenge === "NEW_PASSWORD_REQUIRED"}
-                  />
-                  {validationErrors.email && (
-                    <div className="invalid-feedback">{validationErrors.email}</div>
-                  )}
-                </div>
+                <ValidatedInput
+                  type="text"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setValidationErrors(prev => ({...prev, email: ""}));
+                  }}
+                  disabled={challenge === "NEW_PASSWORD_REQUIRED"}
+                  error={validationErrors.email}
+                />
               )}
               {(!challenge || challenge === "NEW_PASSWORD_REQUIRED") && (
-                <div className="mb-3">
-                  <input
-                    type="password"
-                    className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
-                    placeholder={challenge === "NEW_PASSWORD_REQUIRED" ? "Current password" : "Password"}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setValidationErrors(prev => ({...prev, password: ""}));
-                    }}
-                    disabled={challenge === "NEW_PASSWORD_REQUIRED"}
-                  />
-                  {validationErrors.password && (
-                    <div className="invalid-feedback">{validationErrors.password}</div>
-                  )}
-                </div>
+                <ValidatedInput
+                  type="password"
+                  placeholder={challenge === "NEW_PASSWORD_REQUIRED" ? "Current password" : "Password"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setValidationErrors(prev => ({...prev, password: ""}));
+                  }}
+                  disabled={challenge === "NEW_PASSWORD_REQUIRED"}
+                  error={validationErrors.password}
+                />
               )}
               {challenge === "NEW_PASSWORD_REQUIRED" && (
                 <>
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className={`form-control ${validationErrors.newPassword ? 'is-invalid' : ''}`}
-                      placeholder="New password"
-                      value={newPassword}
-                      onChange={(e) => {
-                        setNewPassword(e.target.value);
-                        setValidationErrors(prev => ({...prev, newPassword: ""}));
-                      }}
-                    />
-                    {validationErrors.newPassword && (
-                      <div className="invalid-feedback">{validationErrors.newPassword}</div>
-                    )}
-                  </div>
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className={`form-control ${validationErrors.confirmNewPassword ? 'is-invalid' : ''}`}
-                      placeholder="Confirm new password"
-                      value={confirmNewPassword}
-                      onChange={(e) => {
-                        setConfirmNewPassword(e.target.value);
-                        setValidationErrors(prev => ({...prev, confirmNewPassword: ""}));
-                      }}
-                    />
-                    {validationErrors.confirmNewPassword && (
-                      <div className="invalid-feedback">{validationErrors.confirmNewPassword}</div>
-                    )}
-                  </div>
+                  <ValidatedInput
+                    type="password"
+                    placeholder="New password"
+                    value={newPassword}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setValidationErrors(prev => ({...prev, newPassword: ""}));
+                    }}
+                    error={validationErrors.newPassword}
+                  />
+                  <ValidatedInput
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmNewPassword}
+                    onChange={(e) => {
+                      setConfirmNewPassword(e.target.value);
+                      setValidationErrors(prev => ({...prev, confirmNewPassword: ""}));
+                    }}
+                    error={validationErrors.confirmNewPassword}
+                  />
                 </>
               )}
               {(challenge === "SMS_MFA" || challenge === "SOFTWARE_TOKEN_MFA") && (
-                <div className="mb-3">
-                  <input
-                    type="text"
-                    className={`form-control ${validationErrors.mfaCode ? 'is-invalid' : ''}`}
-                    placeholder={challenge === "SMS_MFA" ? "SMS MFA code" : "Authenticator code"}
-                    value={mfaCode}
-                    onChange={(e) => {
-                      setMfaCode(e.target.value);
-                      setValidationErrors(prev => ({...prev, mfaCode: ""}));
-                    }}
-                  />
-                  {validationErrors.mfaCode && (
-                    <div className="invalid-feedback">{validationErrors.mfaCode}</div>
-                  )}
-                </div>
+                <ValidatedInput
+                  type="text"
+                  placeholder={challenge === "SMS_MFA" ? "SMS MFA code" : "Authenticator code"}
+                  value={mfaCode}
+                  onChange={(e) => {
+                    setMfaCode(e.target.value);
+                    setValidationErrors(prev => ({...prev, mfaCode: ""}));
+                  }}
+                  error={validationErrors.mfaCode}
+                />
               )}
               <div className="d-flex justify-content-center gap-3">
                 <button type="submit" className="btn btn-primary">
