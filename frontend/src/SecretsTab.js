@@ -12,6 +12,12 @@ import "./App.css";
 import { copyToClipboard } from "./ClipboardUtils";
 import { useAppContext } from './AppContext';
 
+const formatTags = (tags) => {
+  if (!tags) return "N/A";
+  if (tags.length === 1 && tags[0] === "NONE") return "";
+  return tags.join(", ");
+};
+
 function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSecretsData }) {
   const { users, fetchUsers, fetchSecrets } = useAppContext();
   const [secretsCache, setSecretsCache] = useState({});
@@ -1168,6 +1174,139 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     setFilteredAvailableUsers(availableUsers);
   }, [availableUsers]);
 
+  const renderSecretRow = (secret) => {
+    const userId = getUserIdFromToken(idToken);
+    const isOwner = secret.user_id === userId;
+    const userRole = group ? secret.shared_with.roles?.[group] || "viewer" : "owner";
+
+    return (
+      <tr key={`${secret.user_id}-${secret.site}-${secret.displaySubdirectory}`}>
+        {mode !== "sharedWithMe" && !group && (
+          <td className="fav-column">
+            <button
+              className="btn favorite-button"
+              onClick={(e) => toggleFavorite(secret, e)}
+            >
+              <FontAwesomeIcon icon={secret.favorite ? faStarSolid : faStarRegular} />
+            </button>
+          </td>
+        )}
+        <td                            
+          className="clickable-cell"                            
+        >
+          <div className="cell-content position-relative"
+          onClick={(e) => handleCopy("site", secret, e)}
+          onKeyDown={handleActivationKey((e) => handleCopy("site", secret, e))}
+          role="button"
+          tabIndex={0}
+          title={`${secret.baseSite}\nClick to copy`}
+          >
+            {secret.baseSite.replace(/^https?:\/\//, '')}
+          </div>
+          {copyNotification?.field === "site" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
+            <span className="item-copy-notification">Copied!</span>
+          )}
+          {secret.notes && (
+              <div className="notes-tooltip-container"
+              onMouseEnter={(e) => {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'notes-tooltip';
+                    tooltip.textContent = secret.notes;
+                    e.currentTarget.appendChild(tooltip);
+                  }}
+                  onMouseLeave={(e) => {
+                    const tooltip = e.currentTarget.querySelector('.notes-tooltip');
+                    if (tooltip) {
+                      tooltip.remove();
+                    }
+                  }}>
+                <FontAwesomeIcon 
+                  icon={faInfoCircle} 
+                  className="notes-icon"
+
+                />
+              </div>                             
+            )}
+        </td>
+        <td
+          onClick={(e) => handleCopy("username", secret, e)}
+          onKeyDown={handleActivationKey((e) => handleCopy("username", secret, e))}
+          tabIndex={0}
+          className="clickable-cell"
+          title={`${secret.username}\nClick to copy`}
+        >
+          <div className="cell-content position-relative">
+            {secret.username}
+          </div>
+          {copyNotification?.field === "username" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
+            <span className="item-copy-notification">Copied!</span>
+          )}
+        </td>
+        <td>
+          <div
+            className="password-container position-relative clickable-cell"
+            onClick={(e) => handleCopy("password", secret, e)}
+            onKeyDown={handleActivationKey((e) => handleCopy("password", secret, e))}
+            role="button"
+            tabIndex={0}
+            title="Click to copy"
+          >
+            {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
+              <span className="password-text">{visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`]}</span>
+            ) : (
+              <span className="spoiler">••••••••</span>
+            )}
+          </div>
+          {copyNotification?.field === "password" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
+            <span className="item-copy-notification">Copied!</span>
+          )}
+        </td>
+        <td>
+          <div className="cell-content">
+            {formatTags(secret.tags)}
+          </div>
+        </td>
+        {(group || mode === "sharedWithMe") && (
+          <td>
+            <div className="cell-content">
+              {isOwner ? "You" :
+                availableUsers.find(user => user.value === secret.user_id)?.label || secret.user_id}
+            </div>
+          </td>
+        )}
+        <td className="last-modified-column">{formatDate(secret.last_modified)}</td>
+        <td className="actions-column">
+          <div className="d-flex gap-2 justify-content-center">
+            <button
+              className="btn view-button"
+              onClick={(e) => handleViewPassword(secret, e)}
+            >
+              <FontAwesomeIcon icon={visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? faEyeSlash : faEye} />
+            </button>
+            {(isOwner || userRole === "editor") && (
+              <>
+                <button
+                  className="btn edit-button"
+                  onClick={(e) => handleEdit(secret, e)}
+                >
+                  <FontAwesomeIcon icon={faEdit} />
+                </button>
+                {isOwner && (
+                  <button
+                    className="btn delete-button"
+                    onClick={(e) => handleDelete(secret, e)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className="secrets-section">
       <div className="search-bar d-flex gap-2 mb-3">
@@ -1227,138 +1366,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedDefaultSecrets.map((secret) => {
-                      const userId = getUserIdFromToken(idToken);
-                      const isOwner = secret.user_id === userId;
-                      const userRole = group ? secret.shared_with.roles?.[group] || "viewer" : "owner";
-
-                      return (
-                        <tr key={`${secret.user_id}-${secret.site}-${secret.displaySubdirectory}`}>
-                          {mode !== "sharedWithMe" && !group && (
-                            <td className="fav-column">
-                              <button
-                                className="btn favorite-button"
-                                onClick={(e) => toggleFavorite(secret, e)}
-                              >
-                                <FontAwesomeIcon icon={secret.favorite ? faStarSolid : faStarRegular} />
-                              </button>
-                            </td>
-                          )}
-                          <td                            
-                            className="clickable-cell"                            
-                          >
-                            <div className="cell-content position-relative"
-                            onClick={(e) => handleCopy("site", secret, e)}
-                            onKeyDown={handleActivationKey((e) => handleCopy("site", secret, e))}
-                            role="button"
-                            tabIndex={0}
-                            title={`${secret.baseSite}\nClick to copy`}
-                            >
-                              {secret.baseSite.replace(/^https?:\/\//, '')}
-                            </div>
-                            {copyNotification?.field === "site" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                              <span className="item-copy-notification">Copied!</span>
-                            )}
-                            {secret.notes && (
-                                <div className="notes-tooltip-container"
-                                onMouseEnter={(e) => {
-                                      const tooltip = document.createElement('div');
-                                      tooltip.className = 'notes-tooltip';
-                                      tooltip.textContent = secret.notes;
-                                      e.currentTarget.appendChild(tooltip);
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      const tooltip = e.currentTarget.querySelector('.notes-tooltip');
-                                      if (tooltip) {
-                                        tooltip.remove();
-                                      }
-                                    }}>
-                                  <FontAwesomeIcon 
-                                    icon={faInfoCircle} 
-                                    className="notes-icon"
-                                    
-                                  />
-                                </div>                             
-                              )}
-                          </td>
-                          <td
-                            onClick={(e) => handleCopy("username", secret, e)}
-                            onKeyDown={handleActivationKey((e) => handleCopy("username", secret, e))}
-                            tabIndex={0}
-                            className="clickable-cell"
-                            title={`${secret.username}\nClick to copy`}
-                          >
-                            <div className="cell-content position-relative">
-                              {secret.username}
-                            </div>
-                            {copyNotification?.field === "username" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                              <span className="item-copy-notification">Copied!</span>
-                            )}
-                          </td>
-                          <td>
-                            <div
-                              className="password-container position-relative clickable-cell"
-                              onClick={(e) => handleCopy("password", secret, e)}
-                              onKeyDown={handleActivationKey((e) => handleCopy("password", secret, e))}
-                              role="button"
-                              tabIndex={0}
-                              title="Click to copy"
-                            >
-                              {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
-                                <span className="password-text">{visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`]}</span>
-                              ) : (
-                                <span className="spoiler">••••••••</span>
-                              )}
-                            </div>
-                            {copyNotification?.field === "password" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                              <span className="item-copy-notification">Copied!</span>
-                            )}
-                          </td>
-                          <td>
-                            <div className="cell-content">
-                              {secret.tags?.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
-                            </div>
-                          </td>
-                          {(group || mode === "sharedWithMe") && (
-                            <td>
-                              <div className="cell-content">
-                                {isOwner ? "You" :
-                                  availableUsers.find(user => user.value === secret.user_id)?.label || secret.user_id}
-                              </div>
-                            </td>
-                          )}
-                          <td className="last-modified-column">{formatDate(secret.last_modified)}</td>
-                          <td className="actions-column">
-                            <div className="d-flex gap-2 justify-content-center">
-                              <button
-                                className="btn view-button"
-                                onClick={(e) => handleViewPassword(secret, e)}
-                              >
-                                <FontAwesomeIcon icon={visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? faEyeSlash : faEye} />
-                              </button>
-                              {(isOwner || userRole === "editor") && (
-                                <>
-                                  <button
-                                    className="btn edit-button"
-                                    onClick={(e) => handleEdit(secret, e)}
-                                  >
-                                    <FontAwesomeIcon icon={faEdit} />
-                                  </button>
-                                  {isOwner && (
-                                    <button
-                                      className="btn delete-button"
-                                      onClick={(e) => handleDelete(secret, e)}
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} />
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {paginatedDefaultSecrets.map((secret) => renderSecretRow(secret))}
                   </tbody>
                 </table>
               </div>
@@ -1427,129 +1435,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                           </tr>
                         </thead>
                         <tbody>
-                          {dirPaginationInfo.currentItems.map(secret => {
-                            const userId = getUserIdFromToken(idToken);
-                            const isOwner = secret.user_id === userId;
-                            const userRole = group ? secret.shared_with.roles?.[group] || "viewer" : "owner";
-
-                            return (
-                              <tr key={`${secret.user_id}-${secret.site}-${secret.displaySubdirectory}`}>
-                                {mode !== "sharedWithMe" && !group && (
-                                  <td className="fav-column">
-                                    <button
-                                      className="btn favorite-button"
-                                      onClick={(e) => toggleFavorite(secret, e)}
-                                    >
-                                      <FontAwesomeIcon icon={secret.favorite ? faStarSolid : faStarRegular} />
-                                    </button>
-                                  </td>
-                                )}
-                                <td                                  
-                                  className="clickable-cell"                                  
-                                >
-                                  <div className="cell-content position-relative"
-                                  onClick={(e) => handleCopy("site", secret, e)}
-                                  onKeyDown={handleActivationKey((e) => handleCopy("site", secret, e))}
-                                  role="button"
-                                  tabIndex={0}
-                                  title={`${secret.baseSite}\nClick to copy`}
-                                  >
-                                    {secret.baseSite.replace(/^https?:\/\//, '')}
-                                  </div>
-                                  {copyNotification?.field === "site" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                                    <span className="item-copy-notification">Copied!</span>
-                                  )}
-                                  {secret.notes && (
-                                <div className="notes-tooltip-container"
-                                onMouseEnter={(e) => {
-                                      const tooltip = document.createElement('div');
-                                      tooltip.className = 'notes-tooltip';
-                                      tooltip.textContent = secret.notes;
-                                      e.currentTarget.appendChild(tooltip);
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      const tooltip = e.currentTarget.querySelector('.notes-tooltip');
-                                      if (tooltip) {
-                                        tooltip.remove();
-                                      }
-                                    }}>
-                                  <FontAwesomeIcon 
-                                    icon={faInfoCircle} 
-                                    className="notes-icon"
-                                    
-                                  />
-                                </div>                             
-                              )}
-                                </td>
-                                <td
-                                  onClick={(e) => handleCopy("username", secret, e)}
-                                  onKeyDown={handleActivationKey((e) => handleCopy("username", secret, e))}
-                                  tabIndex={0}
-                                  className="clickable-cell"
-                                  title={`${secret.username}\nClick to copy`}
-                                >
-                                  <div className="cell-content position-relative">
-                                    {secret.username}
-                                  </div>
-                                  {copyNotification?.field === "username" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                                    <span className="item-copy-notification">Copied!</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div
-                                    className="password-container position-relative clickable-cell"
-                                    onClick={(e) => handleCopy("password", secret, e)}
-                                    onKeyDown={handleActivationKey((e) => handleCopy("password", secret, e))}
-                                    role="button"
-                                    tabIndex={0}
-                                    title="Click to copy"
-                                  >
-                                    {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
-                                      <span className="password-text">{visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`]}</span>
-                                    ) : (
-                                      <span className="spoiler">••••••••</span>
-                                    )}
-                                  </div>
-                                  {copyNotification?.field === "password" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                                    <span className="item-copy-notification">Copied!</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div className="cell-content">
-                                    {secret.tags?.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
-                                  </div>
-                                </td>
-                                {(group || mode === "sharedWithMe") && (
-                                  <td>
-                                    <div className="cell-content">
-                                      {isOwner ? "You" :
-                                        availableUsers.find(user => user.value === secret.user_id)?.label || secret.user_id}
-                                    </div>
-                                  </td>
-                                )}
-                                <td className="last-modified-column">{formatDate(secret.last_modified)}</td>
-                                <td className="actions-column">
-                                  <div className="d-flex gap-2 justify-content-center">
-                                    <button className="btn view-button" onClick={(e) => handleViewPassword(secret, e)}>
-                                      <FontAwesomeIcon icon={visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? faEyeSlash : faEye} />
-                                    </button>
-                                    {(isOwner || userRole === "editor") && (
-                                      <>
-                                        <button className="btn edit-button" onClick={(e) => handleEdit(secret, e)}>
-                                          <FontAwesomeIcon icon={faEdit} />
-                                        </button>
-                                        {isOwner && (
-                                          <button className="btn delete-button" onClick={(e) => handleDelete(secret, e)}>
-                                            <FontAwesomeIcon icon={faTrash} />
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          {dirPaginationInfo.currentItems.map((secret) => renderSecretRow(secret))}
                         </tbody>
                       </table>
                     </div>

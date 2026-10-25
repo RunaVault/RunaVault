@@ -63,7 +63,7 @@ export const handler = async (event) => {
 
       if (!passwordId) {
         if (parts.length >= 3) {
-          passwordId = parts[parts.length - 2];
+          passwordId = parts.at(-2);
         }
       }
 
