@@ -5,7 +5,7 @@ import {
   faStar as faStarSolid, faSync, faShareAlt, faChevronLeft, faChevronRight, faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
-import { encryptPassword, decryptPassword } from "./CryptoUtils";
+import { encryptPassword, decryptPassword, generateSecurePassword } from "./CryptoUtils";
 import CreatableSelect from 'react-select/creatable';
 import Select from 'react-select';
 import "./App.css";
@@ -937,12 +937,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
   };
 
   const generateRandomPassword = () => {
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    for (let i = 0; i < 16; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    setEditPassword(password);
+    setEditPassword(generateSecurePassword());
   };
 
   const handleShareDirectory = (dir) => {

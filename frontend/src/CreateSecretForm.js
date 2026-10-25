@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { encryptPassword, isCryptoSupported } from "./CryptoUtils";
+import { encryptPassword, isCryptoSupported, generateSecurePassword } from "./CryptoUtils";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash, faUsers, faShuffle } from '@fortawesome/free-solid-svg-icons';
 import Select from 'react-select';
@@ -96,13 +96,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
   };
 
   const generatePassword = () => {
-    const length = 16;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let newPassword = "";
-    for (let i = 0; i < length; i++) {
-      newPassword += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    setPassword(newPassword);
+    setPassword(generateSecurePassword());
     setShowPassword(true);
   };
 

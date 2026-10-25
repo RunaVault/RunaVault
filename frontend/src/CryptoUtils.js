@@ -9,6 +9,25 @@ export const isCryptoSupported = () => {
   return window.crypto && window.crypto.subtle;
 };
 
+const PASSWORD_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+
+// Uses the CSPRNG with rejection sampling so every character is equally likely.
+export const generateSecurePassword = (length = 16) => {
+  const charsetLength = PASSWORD_CHARSET.length;
+  const limit = 256 - (256 % charsetLength);
+  const buffer = new Uint8Array(length * 2);
+  let password = "";
+  while (password.length < length) {
+    window.crypto.getRandomValues(buffer);
+    for (let i = 0; i < buffer.length && password.length < length; i++) {
+      if (buffer[i] < limit) {
+        password += PASSWORD_CHARSET[buffer[i] % charsetLength];
+      }
+    }
+  }
+  return password;
+};
+
 const initKMS = async (idToken) => {
   if (!idToken) throw new Error('No ID token provided');
   const payload = JSON.parse(atob(idToken.split('.')[1]));
