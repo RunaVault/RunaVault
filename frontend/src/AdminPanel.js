@@ -119,7 +119,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         setLoading(false);
       }
     };
-    fetchData();
+    void fetchData();
   }, [accessToken, fetchAllUserGroups]);
 
   const validateEmail = (email) => {
@@ -531,7 +531,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     const usersWithoutGroups = users.filter(user => !userGroups.hasOwnProperty(user.value));
     
     if (usersWithoutGroups.length > 0) {
-      (async () => {
+      void (async () => {
         try {
           const usernames = usersWithoutGroups.map(user => user.value);
           const newUserGroups = await fetchAllUserGroups();

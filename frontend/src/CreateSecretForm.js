@@ -77,7 +77,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
       }
     };
 
-    fetchUsers();
+    void fetchUsers();
 
     const groups = getUserGroupsFromToken(idToken);
     const groupOptions = groups.map(group => ({ value: group, label: group }));
@@ -383,11 +383,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
               value={shareWithUsers}
               onChange={(selected) => setShareWithUsers(selected || [])}
               placeholder="Select or type name/email"
-              noOptionsMessage={() => 
-                userFilter 
-                  ? "No users available" 
-                  : "No users available"
-              }
+              noOptionsMessage={() => userFilter ? "No users found" : "No users available"}
               isLoading={loading}
               isDisabled={loading || !!error}
             />

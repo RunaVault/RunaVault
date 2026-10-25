@@ -91,7 +91,6 @@
   overflow: hidden;
   transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
   padding-right: 50px;
-  margin-right: 10px;
   padding-left: 66px;
   min-height: 50px;
   margin: 10px;
@@ -258,7 +257,6 @@
 .password-text {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
   white-space: nowrap;
 }
 
@@ -1169,10 +1167,6 @@ input:-webkit-autofill {
 }
 
 .refresh-button:hover {
-  border-top-color: #3d3d3d00 !important;
-  border-right-color: #3d3d3d00 !important;
-  border-bottom-color: #3d3d3d00 !important;
-  border-left-color: #3d3d3d00 !important;
   border: 0px solid #3d3d3d00!important;
 }
 
@@ -1271,7 +1265,6 @@ input:-webkit-autofill {
 }
 
 .dark-mode .secrets-table .table-fixed th {
-  background-color: #09090b;
   color: #9797a0;
   background-color: hsl(240deg 3.7% 15.88%);
 }

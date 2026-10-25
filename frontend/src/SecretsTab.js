@@ -494,6 +494,13 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     }
   };
 
+  const handleActivationKey = (handler) => (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handler(e);
+    }
+  };
+
   const handleCopy = async (field, secret, e) => {
     setError(null);
     e.preventDefault();
@@ -1256,6 +1263,9 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                           >
                             <div className="cell-content position-relative"
                             onClick={(e) => handleCopy("site", secret, e)}
+                            onKeyDown={handleActivationKey((e) => handleCopy("site", secret, e))}
+                            role="button"
+                            tabIndex={0}
                             title={`${secret.baseSite}\nClick to copy`}
                             >
                               {secret.baseSite.replace(/^https?:\/\//, '')}
@@ -1301,6 +1311,9 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                             <div
                               className="password-container position-relative clickable-cell"
                               onClick={(e) => handleCopy("password", secret, e)}
+                              onKeyDown={handleActivationKey((e) => handleCopy("password", secret, e))}
+                              role="button"
+                              tabIndex={0}
                               title="Click to copy"
                             >
                               {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
@@ -1382,7 +1395,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
 
             return (
               <div key={dir} className="directory mb-3">
-                <div className="directory-header p-2 d-flex justify-content-between align-items-center" onClick={() => toggleDirectory(dir)}>
+                <div className="directory-header p-2 d-flex justify-content-between align-items-center" onClick={() => toggleDirectory(dir)} onKeyDown={handleActivationKey(() => toggleDirectory(dir))} role="button" tabIndex={0} aria-expanded={!!expandedDirs[dir]}>
                   <div className="d-flex align-items-center">
                     <FontAwesomeIcon
                       icon={expandedDirs[dir] ? faFolderOpen : faFolder}
@@ -1448,6 +1461,9 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                                 >
                                   <div className="cell-content position-relative"
                                   onClick={(e) => handleCopy("site", secret, e)}
+                                  onKeyDown={handleActivationKey((e) => handleCopy("site", secret, e))}
+                                  role="button"
+                                  tabIndex={0}
                                   title={`${secret.baseSite}\nClick to copy`}
                                   >
                                     {secret.baseSite.replace(/^https?:\/\//, '')}
@@ -1493,6 +1509,9 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                                   <div
                                     className="password-container position-relative clickable-cell"
                                     onClick={(e) => handleCopy("password", secret, e)}
+                                    onKeyDown={handleActivationKey((e) => handleCopy("password", secret, e))}
+                                    role="button"
+                                    tabIndex={0}
                                     title="Click to copy"
                                   >
                                     {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (

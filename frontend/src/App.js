@@ -505,29 +505,33 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
 
   useEffect(() => {
     if (challenge === "MFA_SETUP" && !secretCode && session) {
-      setupMFA();
+      void setupMFA();
     }
   }, [challenge, secretCode, session]);
 
-  const copySecretCode = () => {
+  const copyWithTextarea = (text) => {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = 0;
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      if (!document.execCommand('copy')) throw new Error("Copy command was rejected");
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  };
+
+  const copySecretCode = async () => {
     if (secretCode) {
       try {
-        const textarea = document.createElement('textarea');
-        textarea.value = secretCode;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = 0;
-        document.body.appendChild(textarea);
-        
-        textarea.select();
-        
         try {
-          navigator.clipboard.writeText(secretCode);
-        } catch (err) {
-          document.execCommand('copy');
+          await navigator.clipboard.writeText(secretCode);
+        } catch {
+          copyWithTextarea(secretCode);
         }
-        
-        document.body.removeChild(textarea);
-        
+
         setCopyMessage("Code copied to clipboard!");
         setTimeout(() => setCopyMessage(""), 3000);
       } catch (err) {
@@ -767,7 +771,14 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
                     {secretCode && (
                       <div className="mb-3">
                         <p className="fw-bold mb-2">Or enter this code manually:</p>
-                        <p className="secret-code" onClick={copySecretCode} title="Click to copy">
+                        <p
+                          className="secret-code"
+                          onClick={() => void copySecretCode()}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void copySecretCode(); } }}
+                          role="button"
+                          tabIndex={0}
+                          title="Click to copy"
+                        >
                           {secretCode}
                         </p>
                         {copyMessage && (
@@ -1057,7 +1068,7 @@ function App() {
       setIsLoading(false);
     };
 
-    checkAuth();
+    void checkAuth();
   }, []);
 
   useEffect(() => {
@@ -1157,7 +1168,7 @@ function App() {
       }
     };
 
-    checkSession();
+    void checkSession();
   }, []);
 
   const handleSignIn = async (tokens, setError) => {
@@ -1294,7 +1305,7 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated && secrets) {
-      fetchSharedWithMeCount();
+      void fetchSharedWithMeCount();
     }
   }, [isAuthenticated, secrets]);
 
@@ -1308,7 +1319,7 @@ function App() {
         if (tag && tag !== "NONE") tagSet.add(tag);
       });
     });
-    return Array.from(tagSet).sort().map(tag => ({ value: tag, label: tag }));
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b)).map(tag => ({ value: tag, label: tag }));
   }, [secrets]);
 
   useEffect(() => {
