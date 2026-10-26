@@ -10,5 +10,7 @@
   "license": "ISC",
   "description": "",
   "type": "module",
-  "dependencies": {}
+  "dependencies": {
+    "@aws-sdk/client-kms": "^3.995.0"
+  }
 }

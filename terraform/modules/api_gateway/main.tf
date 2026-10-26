@@ -17,9 +17,9 @@ resource "aws_apigatewayv2_api" "api" {
   )
 }
 
-# Create the JWT authorizer
+# Native Cognito JWT authorizer (authorizer_type = "JWT")
 resource "aws_apigatewayv2_authorizer" "authorizer" {
-  count = var.create_authorizer ? 1 : 0
+  count = var.create_authorizer && var.authorizer_type == "JWT" ? 1 : 0
 
   api_id           = aws_apigatewayv2_api.api.id
   authorizer_type  = "JWT"
@@ -30,6 +30,26 @@ resource "aws_apigatewayv2_authorizer" "authorizer" {
     audience = var.authorizer_audience
     issuer   = var.authorizer_issuer
   }
+}
+
+# Dual-mode (Cognito JWT / machine token) Lambda authorizer
+# (authorizer_type = "REQUEST"). Result caching is disabled by default
+# (authorizer_result_ttl_in_seconds = 0) so token revocation is immediate.
+resource "aws_apigatewayv2_authorizer" "lambda_authorizer" {
+  count = var.create_authorizer && var.authorizer_type == "REQUEST" ? 1 : 0
+
+  api_id                            = aws_apigatewayv2_api.api.id
+  authorizer_type                   = "REQUEST"
+  identity_sources                  = var.authorizer_identity_sources
+  name                              = var.authorizer_name
+  authorizer_uri                    = var.authorizer_uri
+  authorizer_payload_format_version = "2.0"
+  enable_simple_responses           = true
+  authorizer_result_ttl_in_seconds  = var.authorizer_result_ttl_in_seconds
+}
+
+locals {
+  authorizer_id = var.authorizer_type == "REQUEST" ? try(aws_apigatewayv2_authorizer.lambda_authorizer[0].id, null) : try(aws_apigatewayv2_authorizer.authorizer[0].id, null)
 }
 
 # Create integrations for Lambda functions
@@ -50,14 +70,18 @@ resource "aws_apigatewayv2_route" "route" {
   api_id             = aws_apigatewayv2_api.api.id
   route_key          = each.key
   target             = "integrations/${aws_apigatewayv2_integration.integration[each.value.integration_key].id}"
-  authorization_type = var.create_authorizer ? "JWT" : null
-  authorizer_id      = var.create_authorizer ? aws_apigatewayv2_authorizer.authorizer[0].id : null
+  authorization_type = var.create_authorizer ? var.authorizer_type : null
+  authorizer_id      = var.create_authorizer ? local.authorizer_id : null
 }
 
 resource "aws_apigatewayv2_stage" "stage" {
   api_id      = aws_apigatewayv2_api.api.id
   name        = var.stage_name
   auto_deploy = true
+  default_route_settings {
+    throttling_burst_limit = var.throttling_burst_limit
+    throttling_rate_limit  = var.throttling_rate_limit
+  }
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gw_logs.arn
     format = jsonencode({

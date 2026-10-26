@@ -234,6 +234,8 @@ When determining the current user, prefer the identity contained in the validate
 
 Never allow a request parameter to override the authenticated identity.
 
+**Exception - the dual-mode authorizer.** `backend/authorizer/index.js` is a Lambda REQUEST authorizer that verifies the Cognito JWT (or a `rv_live_...` machine token - see `docs/machine-authentication.md`) once, before any other Lambda runs, and attaches the result as `{ authType, userId, groups, scopes, allowedSecretPaths, tokenId }` on `event.requestContext.authorizer.lambda`. `get_secret` and `list_secrets` read this via `getAuthContext()` (`backend/layers/nodejs/authz.js`) instead of calling `verifyToken()`/`getAuthToken()` themselves - this is intentional, not a shortcut, since the authorizer has already done that verification and machine tokens aren't JWTs at all. Every other handler is unaffected and still independently verifies the raw Cognito JWT itself, exactly as described above. If you add a new secret-related endpoint that machine tokens should be able to call, use `getAuthContext()` + `requireScope()`/`isSecretPathAllowed()` from `authz.js` rather than reimplementing these checks.
+
 ---
 
 # Authorization

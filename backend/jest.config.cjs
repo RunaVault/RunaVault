@@ -5,9 +5,11 @@ module.exports = {
   transformIgnorePatterns: ['<rootDir>/node_modules/'],
   moduleNameMapper: {
     '^@aws-sdk/client-dynamodb$': '<rootDir>/node_modules/@aws-sdk/client-dynamodb',
+    '^@aws-sdk/client-kms$': '<rootDir>/node_modules/@aws-sdk/client-kms',
     '^uuid$': '<rootDir>/node_modules/uuid',
     '^jsonwebtoken$': '<rootDir>/node_modules/jsonwebtoken',
     '^jwks-rsa$': '<rootDir>/node_modules/jwks-rsa',
+    '^ipaddr\\.js$': '<rootDir>/node_modules/ipaddr.js',
   },
   moduleDirectories: ['node_modules', '<rootDir>/create_secret/node_modules'],
   moduleFileExtensions: ['js', 'json', 'jsx', 'node'],

@@ -278,12 +278,15 @@ resource "aws_cognito_user_pool_client" "app_client" {
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
-  callback_urls                        = ["https://${var.frontend_domain}/"]
-  logout_urls                          = ["https://${var.frontend_domain}/logout"]
-  supported_identity_providers         = ["COGNITO"]
-  access_token_validity                = 60
-  id_token_validity                    = 60
-  refresh_token_validity               = 5
+  # The loopback URL is for `runa login` (Authorization Code + PKCE, RFC 8252
+  # native-app flow): the CLI binds this fixed local port and completes the
+  # exchange itself, it is never served by anything on the network.
+  callback_urls                = ["https://${var.frontend_domain}/", "http://127.0.0.1:8976/callback"]
+  logout_urls                  = ["https://${var.frontend_domain}/logout"]
+  supported_identity_providers = ["COGNITO"]
+  access_token_validity        = 60
+  id_token_validity            = 60
+  refresh_token_validity       = 5
 
   token_validity_units {
     access_token  = "minutes"
