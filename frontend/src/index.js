@@ -4,15 +4,13 @@ import App from "./App";
 import { AuthProvider } from "react-oidc-context";
 import { ThemeProvider } from "./ThemeContext";
 import "./index.css";
-import { library } from '@fortawesome/fontawesome-svg-core';
+import { library, config } from '@fortawesome/fontawesome-svg-core';
 import { 
   faUser, faSignOutAlt, faUsersCog, faPlus, faMoon, faSun,
   faEye, faEyeSlash, faTrash, faEdit, faFolder, faFolderOpen, faUsers,
   faSync, faShareAlt, faChevronLeft, faChevronRight, faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
-
-import { config } from '@fortawesome/fontawesome-svg-core';
 
 config.autoAddCss = false;
 

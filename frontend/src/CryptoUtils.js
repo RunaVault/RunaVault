@@ -6,7 +6,26 @@ const AWS_REGION = import.meta.env.VITE_AWS_REGION;
 const KMS_KEY_ID = import.meta.env.VITE_KMS_KEY_ID;
 
 export const isCryptoSupported = () => {
-  return window.crypto && window.crypto.subtle;
+  return window.crypto?.subtle;
+};
+
+const PASSWORD_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+
+// Uses the CSPRNG with rejection sampling so every character is equally likely.
+export const generateSecurePassword = (length = 16) => {
+  const charsetLength = PASSWORD_CHARSET.length;
+  const limit = 256 - (256 % charsetLength);
+  const buffer = new Uint8Array(length * 2);
+  let password = "";
+  while (password.length < length) {
+    window.crypto.getRandomValues(buffer);
+    for (let i = 0; i < buffer.length && password.length < length; i++) {
+      if (buffer[i] < limit) {
+        password += PASSWORD_CHARSET[buffer[i] % charsetLength];
+      }
+    }
+  }
+  return password;
 };
 
 const initKMS = async (idToken) => {
@@ -122,7 +141,7 @@ export const decryptPassword = async (encryptedData, idToken, encryptionContext 
     const userId = tokenPayload.sub;
     let userGroups = tokenPayload["cognito:groups"] || [];
     if (typeof userGroups === "string") {
-      userGroups = userGroups.split(" ").filter(g => g);
+      userGroups = userGroups.split(" ").filter(Boolean);
     } else if (!Array.isArray(userGroups)) {
       userGroups = [];
     }

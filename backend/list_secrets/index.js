@@ -39,7 +39,7 @@ function formatSecret(item) {
     notes: item.notes?.S || "",
     tags: item.tags?.SS?.[0] === "NONE" ? [] : item.tags?.SS || [],
     favorite: item.favorite?.BOOL || false,
-    version: item.version?.N ? parseInt(item.version.N, 10) : 1,
+    version: item.version?.N ? Number.parseInt(item.version.N, 10) : 1,
   };
 }
 

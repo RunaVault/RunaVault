@@ -12,7 +12,6 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
   const [newUserGroups, setNewUserGroups] = useState([]);
   const [recentlyCreatedUserEmail, setRecentlyCreatedUserEmail] = useState(null);
   const [activeTab, setActiveTab] = useState("users"); 
-  const [activeUserTab, setActiveUserTab] = useState("create"); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -23,7 +22,6 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
   const [givenName, setGivenName] = useState("");
   const [familyName, setFamilyName] = useState("");
   const [emailError, setEmailError] = useState(null);
-  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [userGroups, setUserGroups] = useState({}); 
   const [givenNameError, setGivenNameError] = useState(null);
   const [familyNameError, setFamilyNameError] = useState(null);
@@ -89,12 +87,6 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const tokenParts = accessToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          setCurrentUserEmail(payload.email);
-        }
-
         const allUsersGroups = await fetchAllUserGroups();
         setUserGroups(allUsersGroups);
 
@@ -119,7 +111,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         setLoading(false);
       }
     };
-    fetchData();
+    void fetchData();
   }, [accessToken, fetchAllUserGroups]);
 
   const validateEmail = (email) => {
@@ -524,16 +516,15 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
   };
 
   const isAdmin = (user) => {
-    return userGroups[user.value] && userGroups[user.value].some(group => group.value === "Admin");
+    return userGroups[user.value]?.some(group => group.value === "Admin");
   };
 
   useEffect(() => {
     const usersWithoutGroups = users.filter(user => !userGroups.hasOwnProperty(user.value));
     
     if (usersWithoutGroups.length > 0) {
-      (async () => {
+      void (async () => {
         try {
-          const usernames = usersWithoutGroups.map(user => user.value);
           const newUserGroups = await fetchAllUserGroups();
           
           setUserGroups(prevGroups => ({
@@ -793,10 +784,10 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         {editUser && (
           <div className="modal-overlay">
             <div className="modal edit-modal">
-              <h4 className="mb-3">Edit User: <span class="edit-user-label">{editUser.label}</span></h4>
+              <h4 className="mb-3">Edit User: <span className="edit-user-label">{editUser.label}</span></h4>
               <form onSubmit={handleEditUser} className="d-flex flex-column gap-3">
                 <div className="row">
-                <div class="col-md-6">
+                <div className="col-md-6">
                 <div className="user-attributes">
                   <h5>User Information</h5>
                   <input
@@ -841,7 +832,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
                   </div>
                 </div>
                 </div>
-                <div class="col-md-6">
+                <div className="col-md-6">
                 <div className="current-groups">
                   <h5>Group Management</h5>
                   <strong>Current Groups:</strong>
@@ -897,7 +888,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         {deleteUserConfirm && (
           <div className="modal-overlay d-flex justify-content-center align-items-center">
             <div className="modal modal-delete p-4 text-center">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9.17218 14.8284L12.0006 12M14.829 9.17157L12.0006 12M12.0006 12L9.17218 9.17157M12.0006 12L14.829 14.8284" stroke="#e53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#e53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9.17218 14.8284L12.0006 12M14.829 9.17157L12.0006 12M12.0006 12L9.17218 9.17157M12.0006 12L14.829 14.8284" stroke="#e53935" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#e53935" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg>
               <h4 className="mb-3">Are you sure?</h4>
                 <p>This process cannot be undone.</p>
               <div className="d-flex justify-content-around gap-3">
@@ -921,7 +912,7 @@ function AdminPanel({ accessToken, onClose, onSessionUpdate }) {
         {deleteGroupConfirm && (
           <div className="modal-overlay d-flex justify-content-center align-items-center">
             <div className="modal modal-delete p-4 text-center">   
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9.17218 14.8284L12.0006 12M14.829 9.17157L12.0006 12M12.0006 12L9.17218 9.17157M12.0006 12L14.829 14.8284" stroke="#e53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#e53935" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M9.17218 14.8284L12.0006 12M14.829 9.17157L12.0006 12M12.0006 12L9.17218 9.17157M12.0006 12L14.829 14.8284" stroke="#e53935" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#e53935" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg>
               <h4 className="mb-3">Are you sure?</h4>
               <p>This process cannot be undone.</p>
               <div className="d-flex justify-content-around gap-3">

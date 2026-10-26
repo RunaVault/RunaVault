@@ -526,6 +526,50 @@ describe('share_directory Lambda', () => {
     expect(responseBody.message).toBe('Directory shared successfully');
   });
 
+  it('should only overwrite share items that already exist', async () => {
+    const event = {
+      headers: { Authorization: 'Bearer validToken' },
+      body: JSON.stringify({
+        subdirectory: 'work',
+        sharedWith: { users: [], groups: ['Group1'] }
+      })
+    };
+
+    // The secret is already shared with user2
+    mockSend.mockResolvedValueOnce({
+      Items: [
+        {
+          user_id: { S: 'user1' },
+          site: { S: 'example.com#password123#user:user2' },
+          username: { S: 'testuser' },
+          password: { S: JSON.stringify({ encryptedPassword: 'encrypted-data' }) },
+          subdirectory: { S: 'work' },
+          shared_with_users: { S: 'user2' },
+          shared_with_groups: { S: 'NONE' },
+          version: { N: '1' },
+          password_id: { S: 'password123' }
+        }
+      ]
+    });
+    mockSend.mockResolvedValue({});
+
+    const response = await handler(event);
+    expect(response.statusCode).toBe(200);
+
+    const puts = mockSend.mock.calls
+      .map(([command]) => command)
+      .filter(command => command.constructor.name === 'PutItemCommand');
+    const putFor = (site) => puts.find(command => command.Item.site.S === site);
+
+    const existingUserItem = putFor('example.com#password123#user:user2');
+    expect(existingUserItem.Item.shared_with_users).toEqual({ S: 'user2' });
+    expect(existingUserItem.ConditionExpression).toBeUndefined();
+
+    const newGroupItem = putFor('example.com#password123#group:Group1');
+    expect(newGroupItem.Item.shared_with_groups).toEqual({ S: 'Group1' });
+    expect(newGroupItem.ConditionExpression).toBe('attribute_not_exists(user_id) AND attribute_not_exists(site)');
+  });
+
   // New test for handling error during delete operations
   it('should handle errors during delete operations', async () => {
     const event = {

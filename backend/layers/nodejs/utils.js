@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import jwksClient from "jwks-rsa";
-import { promisify } from "util";
+import { promisify } from "node:util";
 
 const { USER_POOL_ID, AWS_REGION } = process.env;
 
@@ -32,12 +32,12 @@ export function formatResponse(statusCode, body, headers = {}) {
 export function sanitizeString(str) {
   if (typeof str !== 'string') return str;
   return str
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/\\/g, '&#92;')
-    .replace(/`/g, '&#96;');
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+    .replaceAll('\\', '&#92;')
+    .replaceAll('`', '&#96;');
 }
 
 export function sanitizeObject(obj) {

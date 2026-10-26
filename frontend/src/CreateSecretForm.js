@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { encryptPassword, isCryptoSupported } from "./CryptoUtils";
+import { encryptPassword, isCryptoSupported, generateSecurePassword } from "./CryptoUtils";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash, faUsers, faShuffle } from '@fortawesome/free-solid-svg-icons';
 import Select from 'react-select';
@@ -77,7 +77,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
       }
     };
 
-    fetchUsers();
+    void fetchUsers();
 
     const groups = getUserGroupsFromToken(idToken);
     const groupOptions = groups.map(group => ({ value: group, label: group }));
@@ -96,13 +96,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
   };
 
   const generatePassword = () => {
-    const length = 16;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let newPassword = "";
-    for (let i = 0; i < length; i++) {
-      newPassword += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    setPassword(newPassword);
+    setPassword(generateSecurePassword());
     setShowPassword(true);
   };
 
@@ -114,7 +108,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
     if (pwd.length >= 16) score++;
     if (/[a-z]/.test(pwd)) score++;
     if (/[A-Z]/.test(pwd)) score++;
-    if (/[0-9]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
     if (/[^a-zA-Z0-9]/.test(pwd)) score++;
     if (score <= 2) return { label: "Weak", level: 1 };
     if (score <= 4) return { label: "Fair", level: 2 };
@@ -228,9 +222,9 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
     const lowercasedQuery = query.toLowerCase().trim();
     const filtered = availableUsers.filter(user => 
       user.label.toLowerCase().includes(lowercasedQuery) ||
-      (user.email && user.email.toLowerCase().includes(lowercasedQuery)) || 
-      (user.given_name && user.given_name.toLowerCase().includes(lowercasedQuery)) || 
-      (user.family_name && user.family_name.toLowerCase().includes(lowercasedQuery)) 
+      user.email?.toLowerCase().includes(lowercasedQuery) || 
+      user.given_name?.toLowerCase().includes(lowercasedQuery) || 
+      user.family_name?.toLowerCase().includes(lowercasedQuery) 
     );
     
     setFilteredAvailableUsers(filtered);
@@ -389,11 +383,7 @@ function CreateSecretForm({ accessToken, idToken, onSecretCreated, onOpenForm, e
               value={shareWithUsers}
               onChange={(selected) => setShareWithUsers(selected || [])}
               placeholder="Select or type name/email"
-              noOptionsMessage={() => 
-                userFilter 
-                  ? "No users available" 
-                  : "No users available"
-              }
+              noOptionsMessage={() => userFilter ? "No users found" : "No users available"}
               isLoading={loading}
               isDisabled={loading || !!error}
             />

@@ -38,18 +38,15 @@ export const handler = async (event) => {
         message: `Notes cannot exceed ${MAX_NOTES_LENGTH} characters`
       });
     }
-    let passwordData;
     let passwordString;
     try {
       if (typeof rawPassword === "object" && rawPassword !== null) {
         // Frontend sent a parsed object — serialize it back to a string for storage
-        passwordData = rawPassword;
         passwordString = JSON.stringify(rawPassword);
       } else if (typeof rawPassword === "string" && rawPassword.startsWith("{")) {
-        passwordData = JSON.parse(rawPassword);
+        JSON.parse(rawPassword); // reject malformed JSON before storing it
         passwordString = rawPassword;
       } else {
-        passwordData = { encryptedPassword: rawPassword, sharedWith: { users: [], groups: [] } };
         passwordString = typeof rawPassword === "string" ? rawPassword : JSON.stringify(rawPassword);
       }
     } catch (e) {
@@ -170,7 +167,7 @@ export const handler = async (event) => {
       notes: item.notes.S,
       tags: item.tags.SS[0] === "NONE" ? [] : item.tags.SS,
       favorite: item.favorite.BOOL,
-      version: parseInt(item.version.N, 10),
+      version: Number.parseInt(item.version.N, 10),
       last_modified: item.last_modified.S,
       password_id: item.password_id.S,
     });

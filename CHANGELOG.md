@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Changed
+- **SonarCloud analysis runs in CI** — `sonarcloud.yml` now checks out the repository, runs the backend tests and uploads Jest coverage using `SonarSource/sonarqube-scan-action` (the deprecated `sonarcloud-github-action` is removed). The project key is `RunaVault_RunaVault`. Automatic Analysis must be disabled for the project in SonarCloud
+- **CI hardening** — GitHub Actions are pinned to commit SHAs and backend dependencies are installed with `npm ci --ignore-scripts`
+- **Frontend refactors** — shared row rendering, secret preparation and decryption lookup in `SecretsTab`; shared `ValidatedInput` for login and password forms; shared `putShareItem` in `share_directory`. No behavior change intended
+
+### Fixed
+- **Copy to clipboard** — failures are reported instead of always showing "Copied!", and the fallback no longer leaves the copied value in a hidden textarea
+- **Keyboard access** — copy cells, directory headers and the MFA secret code can be used with Tab and Enter/Space; the Share Directory button keeps working from the keyboard
+
+### Security
+- **Password generator** uses `crypto.getRandomValues` with rejection sampling instead of `Math.random`
+- **Tests** for `cognito:groups` claim parsing in `get_secret` and for conditional writes of new share items in `share_directory`
+
 ## [1.1.0] - 2026-07-05
 ### Added
 - **Password strength indicator** in the Create Secret form — color-coded bar and label (Weak / Fair / Good / Strong) that updates as you type
