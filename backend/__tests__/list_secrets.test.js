@@ -131,6 +131,35 @@ describe('list_secrets Lambda', () => {
     });
   });
 
+  it('should return the stored version number and default to 1 when it is missing', async () => {
+    const event = {
+      headers: { Authorization: 'Bearer validToken' }
+    };
+    const baseItem = {
+      user_id: { S: 'user1' },
+      username: { S: 'testuser' },
+      password: { S: JSON.stringify({ encryptedPassword: 'encrypted-data' }) },
+      subdirectory: { S: 'default' }
+    };
+
+    mockSend.mockResolvedValueOnce({
+      Items: [
+        { ...baseItem, site: { S: 'versioned.com' }, version: { N: '3' } },
+        { ...baseItem, site: { S: 'unversioned.com' } }
+      ]
+    });
+    mockSend.mockResolvedValue({ Items: [] });
+
+    const response = await handler(event);
+
+    expect(response.statusCode).toBe(200);
+    const versions = Object.fromEntries(
+      JSON.parse(response.body).secrets.map(secret => [secret.site, secret.version])
+    );
+    expect(versions).toEqual({ 'versioned.com': 3, 'unversioned.com': 1 });
+    mockSend.mockReset();
+  });
+
   it('should list group shared secrets', async () => {
     // Mock event
     const event = {

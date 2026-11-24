@@ -20,8 +20,27 @@ import initBackgroundAnimation from "./BackgroundAnimation";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faSignOutAlt, faUsersCog, faPlus, faMoon, faSun, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import "./App.css";
+import { copyToClipboard } from "./ClipboardUtils";
 import QRCode from 'qrcode';
 import { AppProvider, useAppContext } from './AppContext';
+
+// Bootstrap input with its validation message; all other props go to the <input>.
+const ValidatedInput = ({ error, ...inputProps }) => (
+  <div className="mb-3">
+    <input {...inputProps} className={`form-control ${error ? 'is-invalid' : ''}`} />
+    {error && <div className="invalid-feedback">{error}</div>}
+  </div>
+);
+
+// Value, error and onChange for a ValidatedInput; editing a field clears its error.
+const bindFieldProps = (validationErrors, setValidationErrors) => (name, value, setValue) => ({
+  value,
+  error: validationErrors[name],
+  onChange: (e) => {
+    setValue(e.target.value);
+    setValidationErrors(prev => ({...prev, [name]: ""}));
+  },
+});
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: import.meta.env.VITE_AWS_REGION,
@@ -38,6 +57,7 @@ const ChangePasswordForm = ({ accessToken, onSuccess, onCancel }) => {
     newPassword: "",
     confirmPassword: ""
   });
+  const fieldProps = bindFieldProps(validationErrors, setValidationErrors);
 
   const validateForm = () => {
     const errors = {};
@@ -95,51 +115,9 @@ const ChangePasswordForm = ({ accessToken, onSuccess, onCancel }) => {
         </div>
       )}
       <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <input
-            type="password"
-            className={`form-control ${validationErrors.oldPassword ? 'is-invalid' : ''}`}
-            placeholder="Old password"
-            value={oldPassword}
-            onChange={(e) => {
-              setOldPassword(e.target.value);
-              setValidationErrors(prev => ({...prev, oldPassword: ""}));
-            }}
-          />
-          {validationErrors.oldPassword && (
-            <div className="invalid-feedback">{validationErrors.oldPassword}</div>
-          )}
-        </div>
-        <div className="mb-3">
-          <input
-            type="password"
-            className={`form-control ${validationErrors.newPassword ? 'is-invalid' : ''}`}
-            placeholder="New password"
-            value={newPassword}
-            onChange={(e) => {
-              setNewPassword(e.target.value);
-              setValidationErrors(prev => ({...prev, newPassword: ""}));
-            }}
-          />
-          {validationErrors.newPassword && (
-            <div className="invalid-feedback">{validationErrors.newPassword}</div>
-          )}
-        </div>
-        <div className="mb-3">
-          <input
-            type="password"
-            className={`form-control ${validationErrors.confirmPassword ? 'is-invalid' : ''}`}
-            placeholder="Confirm new password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              setValidationErrors(prev => ({...prev, confirmPassword: ""}));
-            }}
-          />
-          {validationErrors.confirmPassword && (
-            <div className="invalid-feedback">{validationErrors.confirmPassword}</div>
-          )}
-        </div>
+        <ValidatedInput type="password" placeholder="Old password" {...fieldProps("oldPassword", oldPassword, setOldPassword)} />
+        <ValidatedInput type="password" placeholder="New password" {...fieldProps("newPassword", newPassword, setNewPassword)} />
+        <ValidatedInput type="password" placeholder="Confirm new password" {...fieldProps("confirmPassword", confirmPassword, setConfirmPassword)} />
         <div className="d-flex justify-content-center gap-3">
           <button type="submit" className="btn btn-primary">
             Save
@@ -176,6 +154,7 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
     newPassword: "",
     confirmPassword: ""
   });
+  const fieldProps = bindFieldProps(validationErrors, setValidationErrors);
   const { darkMode } = useTheme();
 
   const validateForm = () => {
@@ -282,21 +261,7 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
 
         {step === 1 ? (
           <form onSubmit={handleRequestCode} className="login-form">
-            <div className="mb-3">
-              <input
-                type="text"
-                className={`form-control ${validationErrors.email ? 'is-invalid' : ''}`}
-                placeholder="Email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setValidationErrors(prev => ({...prev, email: ""}));
-                }}
-              />
-              {validationErrors.email && (
-                <div className="invalid-feedback">{validationErrors.email}</div>
-              )}
-            </div>
+            <ValidatedInput type="text" placeholder="Email" {...fieldProps("email", email, setEmail)} />
             <div className="d-flex justify-content-center gap-3">
               <button type="submit" className="btn btn-primary">
                 Send Code
@@ -314,51 +279,9 @@ const ForgotPasswordForm = ({ onBackToLogin }) => {
           </form>
         ) : (
           <form onSubmit={handleConfirmPassword} className="login-form">
-            <div className="mb-3">
-              <input
-                type="text"
-                className={`form-control ${validationErrors.verificationCode ? 'is-invalid' : ''}`}
-                placeholder="Verification code"
-                value={verificationCode}
-                onChange={(e) => {
-                  setVerificationCode(e.target.value);
-                  setValidationErrors(prev => ({...prev, verificationCode: ""}));
-                }}
-              />
-              {validationErrors.verificationCode && (
-                <div className="invalid-feedback">{validationErrors.verificationCode}</div>
-              )}
-            </div>
-            <div className="mb-3">
-              <input
-                type="password"
-                className={`form-control ${validationErrors.newPassword ? 'is-invalid' : ''}`}
-                placeholder="New password"
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value);
-                  setValidationErrors(prev => ({...prev, newPassword: ""}));
-                }}
-              />
-              {validationErrors.newPassword && (
-                <div className="invalid-feedback">{validationErrors.newPassword}</div>
-              )}
-            </div>
-            <div className="mb-3">
-              <input
-                type="password"
-                className={`form-control ${validationErrors.confirmPassword ? 'is-invalid' : ''}`}
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setValidationErrors(prev => ({...prev, confirmPassword: ""}));
-                }}
-              />
-              {validationErrors.confirmPassword && (
-                <div className="invalid-feedback">{validationErrors.confirmPassword}</div>
-              )}
-            </div>
+            <ValidatedInput type="text" placeholder="Verification code" {...fieldProps("verificationCode", verificationCode, setVerificationCode)} />
+            <ValidatedInput type="password" placeholder="New password" {...fieldProps("newPassword", newPassword, setNewPassword)} />
+            <ValidatedInput type="password" placeholder="Confirm password" {...fieldProps("confirmPassword", confirmPassword, setConfirmPassword)} />
             <div className="d-flex justify-content-center gap-3">
               <button type="submit" className="btn btn-primary">
                 Change Password
@@ -398,10 +321,10 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
     confirmNewPassword: "",
     verificationCode: ""
   });
+  const fieldProps = bindFieldProps(validationErrors, setValidationErrors);
   const { darkMode } = useTheme();
   
   const [secretCode, setSecretCode] = useState("");
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const canvasRef = useRef(null);
   
@@ -426,7 +349,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
           await QRCode.toCanvas(canvasRef.current, otpauth, { width: 200 });
         }
         
-        setQrCodeUrl(otpauth);
       }
       
       if (response.Session) {
@@ -471,7 +393,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
             
             setVerificationCode("");
             setSecretCode("");
-            setQrCodeUrl("");
             setChallenge(null);
           } else if (challengeResponse.ChallengeName) {
             setChallenge(challengeResponse.ChallengeName);
@@ -486,7 +407,6 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
               setVerificationCode("");
               setSession(null);
               setSecretCode("");
-              setQrCodeUrl("");
               setMessage("");
             }, 3000);
           }
@@ -505,29 +425,15 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
 
   useEffect(() => {
     if (challenge === "MFA_SETUP" && !secretCode && session) {
-      setupMFA();
+      void setupMFA();
     }
   }, [challenge, secretCode, session]);
 
-  const copySecretCode = () => {
+  const copySecretCode = async () => {
     if (secretCode) {
       try {
-        const textarea = document.createElement('textarea');
-        textarea.value = secretCode;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = 0;
-        document.body.appendChild(textarea);
-        
-        textarea.select();
-        
-        try {
-          navigator.clipboard.writeText(secretCode);
-        } catch (err) {
-          document.execCommand('copy');
-        }
-        
-        document.body.removeChild(textarea);
-        
+        await copyToClipboard(secretCode);
+
         setCopyMessage("Code copied to clipboard!");
         setTimeout(() => setCopyMessage(""), 3000);
       } catch (err) {
@@ -767,7 +673,14 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
                     {secretCode && (
                       <div className="mb-3">
                         <p className="fw-bold mb-2">Or enter this code manually:</p>
-                        <p className="secret-code" onClick={copySecretCode} title="Click to copy">
+                        <p
+                          className="secret-code"
+                          onClick={() => void copySecretCode()}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void copySecretCode(); } }}
+                          role="button"
+                          tabIndex={0}
+                          title="Click to copy"
+                        >
                           {secretCode}
                         </p>
                         {copyMessage && (
@@ -792,7 +705,7 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
                     placeholder="Enter 6-digit code from app"
                     value={verificationCode}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '').substring(0, 6);
+                      const value = e.target.value.replace(/\D/g, '').substring(0, 6);
                       setVerificationCode(value);
                       setValidationErrors(prev => ({...prev, verificationCode: ""}));
                     }}
@@ -810,91 +723,19 @@ const LoginForm = ({ onSignIn, onSignOut }) => {
           ) : (
             <>
               {(!challenge || challenge === "NEW_PASSWORD_REQUIRED") && (
-                <div className="mb-3">
-                  <input
-                    type="text"
-                    className={`form-control ${validationErrors.email ? 'is-invalid' : ''}`}
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setValidationErrors(prev => ({...prev, email: ""}));
-                    }}
-                    disabled={challenge === "NEW_PASSWORD_REQUIRED"}
-                  />
-                  {validationErrors.email && (
-                    <div className="invalid-feedback">{validationErrors.email}</div>
-                  )}
-                </div>
+                <ValidatedInput type="text" placeholder="Email" disabled={challenge === "NEW_PASSWORD_REQUIRED"} {...fieldProps("email", email, setEmail)} />
               )}
               {(!challenge || challenge === "NEW_PASSWORD_REQUIRED") && (
-                <div className="mb-3">
-                  <input
-                    type="password"
-                    className={`form-control ${validationErrors.password ? 'is-invalid' : ''}`}
-                    placeholder={challenge === "NEW_PASSWORD_REQUIRED" ? "Current password" : "Password"}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setValidationErrors(prev => ({...prev, password: ""}));
-                    }}
-                    disabled={challenge === "NEW_PASSWORD_REQUIRED"}
-                  />
-                  {validationErrors.password && (
-                    <div className="invalid-feedback">{validationErrors.password}</div>
-                  )}
-                </div>
+                <ValidatedInput type="password" placeholder={challenge === "NEW_PASSWORD_REQUIRED" ? "Current password" : "Password"} disabled={challenge === "NEW_PASSWORD_REQUIRED"} {...fieldProps("password", password, setPassword)} />
               )}
               {challenge === "NEW_PASSWORD_REQUIRED" && (
                 <>
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className={`form-control ${validationErrors.newPassword ? 'is-invalid' : ''}`}
-                      placeholder="New password"
-                      value={newPassword}
-                      onChange={(e) => {
-                        setNewPassword(e.target.value);
-                        setValidationErrors(prev => ({...prev, newPassword: ""}));
-                      }}
-                    />
-                    {validationErrors.newPassword && (
-                      <div className="invalid-feedback">{validationErrors.newPassword}</div>
-                    )}
-                  </div>
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className={`form-control ${validationErrors.confirmNewPassword ? 'is-invalid' : ''}`}
-                      placeholder="Confirm new password"
-                      value={confirmNewPassword}
-                      onChange={(e) => {
-                        setConfirmNewPassword(e.target.value);
-                        setValidationErrors(prev => ({...prev, confirmNewPassword: ""}));
-                      }}
-                    />
-                    {validationErrors.confirmNewPassword && (
-                      <div className="invalid-feedback">{validationErrors.confirmNewPassword}</div>
-                    )}
-                  </div>
+                  <ValidatedInput type="password" placeholder="New password" {...fieldProps("newPassword", newPassword, setNewPassword)} />
+                  <ValidatedInput type="password" placeholder="Confirm new password" {...fieldProps("confirmNewPassword", confirmNewPassword, setConfirmNewPassword)} />
                 </>
               )}
               {(challenge === "SMS_MFA" || challenge === "SOFTWARE_TOKEN_MFA") && (
-                <div className="mb-3">
-                  <input
-                    type="text"
-                    className={`form-control ${validationErrors.mfaCode ? 'is-invalid' : ''}`}
-                    placeholder={challenge === "SMS_MFA" ? "SMS MFA code" : "Authenticator code"}
-                    value={mfaCode}
-                    onChange={(e) => {
-                      setMfaCode(e.target.value);
-                      setValidationErrors(prev => ({...prev, mfaCode: ""}));
-                    }}
-                  />
-                  {validationErrors.mfaCode && (
-                    <div className="invalid-feedback">{validationErrors.mfaCode}</div>
-                  )}
-                </div>
+                <ValidatedInput type="text" placeholder={challenge === "SMS_MFA" ? "SMS MFA code" : "Authenticator code"} {...fieldProps("mfaCode", mfaCode, setMfaCode)} />
               )}
               <div className="d-flex justify-content-center gap-3">
                 <button type="submit" className="btn btn-primary">
@@ -939,24 +780,8 @@ function App() {
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [idToken, setIdToken] = useState(null);
-  const [user, setUser] = useState(null);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showMfaSetup, setShowMfaSetup] = useState(false);
-  const [mfaSecret, setMfaSecret] = useState(null);
-  const [mfaQrCode, setMfaQrCode] = useState(null);
-  const [mfaVerificationCode, setMfaVerificationCode] = useState("");
-  const [mfaError, setMfaError] = useState("");
-  const [mfaSuccess, setMfaSuccess] = useState("");
-  const [sharedWithMeCount, setSharedWithMeCount] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState(null);
-  const [refreshSuccess, setRefreshSuccess] = useState(false);
-  const { secrets, fetchSecrets, fetchUsers, updateSecrets, resetState } = useAppContext();
+  const { secrets, updateSecrets, resetState } = useAppContext();
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(false);
-  const [showExpandButton, setShowExpandButton] = useState(false);
-  const groupTabsRef = useRef(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -967,8 +792,8 @@ function App() {
       const storedTokenTimestamp = localStorage.getItem('tokenTimestamp');
       if (storedAccessToken && storedIdToken && storedRefreshToken && storedExpiresIn && storedTokenTimestamp) {
         const currentTime = Math.floor(Date.now() / 1000);
-        const tokenAge = currentTime - parseInt(storedTokenTimestamp);
-        const expiresIn = parseInt(storedExpiresIn);
+        const tokenAge = currentTime - Number.parseInt(storedTokenTimestamp, 10);
+        const expiresIn = Number.parseInt(storedExpiresIn, 10);
 
         if (tokenAge >= expiresIn - 300) {
           try {
@@ -997,8 +822,6 @@ function App() {
               localStorage.setItem('expiresIn', response.AuthenticationResult.ExpiresIn.toString());
               localStorage.setItem('tokenTimestamp', Math.floor(Date.now() / 1000).toString());
               
-              setAccessToken(newTokens.access_token);
-              setIdToken(newTokens.id_token);
               setUserTokens(newTokens);
               
               const userCommand = new GetUserCommand({
@@ -1023,8 +846,6 @@ function App() {
             cleanAndSignOut();
           }
         } else {
-          setAccessToken(storedAccessToken);
-          setIdToken(storedIdToken);
           setUserTokens({
             id_token: storedIdToken,
             access_token: storedAccessToken,
@@ -1057,7 +878,7 @@ function App() {
       setIsLoading(false);
     };
 
-    checkAuth();
+    void checkAuth();
   }, []);
 
   useEffect(() => {
@@ -1081,8 +902,8 @@ function App() {
           setIsLoading(true);
           
           const currentTime = Math.floor(Date.now() / 1000);
-          const tokenAge = currentTime - parseInt(tokenTimestamp);
-          const tokenExpiresIn = parseInt(expiresIn);
+          const tokenAge = currentTime - Number.parseInt(tokenTimestamp, 10);
+          const tokenExpiresIn = Number.parseInt(expiresIn, 10);
           
           if (tokenAge >= tokenExpiresIn - 300) {
             console.log("Token expired or about to expire, refreshing...");
@@ -1157,7 +978,7 @@ function App() {
       }
     };
 
-    checkSession();
+    void checkSession();
   }, []);
 
   const handleSignIn = async (tokens, setError) => {
@@ -1223,22 +1044,8 @@ function App() {
     setUserTokens(null);
     setUserInfo(null);
     setAuthError(null);
-    setAccessToken(null);
-    setIdToken(null);
-    setUser(null);
     setShowAdminPanel(false);
     setShowChangePassword(false);
-    setShowForgotPassword(false);
-    setShowMfaSetup(false);
-    setMfaSecret(null);
-    setMfaQrCode(null);
-    setMfaVerificationCode("");
-    setMfaError("");
-    setMfaSuccess("");
-    setSharedWithMeCount(0);
-    setIsRefreshing(false);
-    setRefreshError(null);
-    setRefreshSuccess(false);
     resetState();
   };
 
@@ -1294,7 +1101,7 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated && secrets) {
-      fetchSharedWithMeCount();
+      void fetchSharedWithMeCount();
     }
   }, [isAuthenticated, secrets]);
 
@@ -1308,15 +1115,8 @@ function App() {
         if (tag && tag !== "NONE") tagSet.add(tag);
       });
     });
-    return Array.from(tagSet).sort().map(tag => ({ value: tag, label: tag }));
+    return Array.from(tagSet).sort((a, b) => Number(a > b) - Number(a < b)).map(tag => ({ value: tag, label: tag }));
   }, [secrets]);
-
-  useEffect(() => {
-    if (activeTab === "secrets" && selectedGroup) {
-      if (secrets) {
-      }
-    }
-  }, [selectedGroup, activeTab, secrets]);
 
   const resetSecretsData = () => {
     resetState();
@@ -1392,13 +1192,9 @@ function App() {
   }, [isAuthenticated]);
 
   const refreshSessionAndData = async () => {
-    setIsRefreshing(true);
-    setRefreshError(null);
-    setRefreshSuccess(false);
     try {
       const success = await refreshTokenAndUserInfo();
       if (success) {
-        setRefreshSuccess(true);
         const groups = getUserGroups();
         setUserGroups(groups);
         resetSecretsData();
@@ -1406,10 +1202,8 @@ function App() {
       }
       return success;
     } catch (err) {
-      setRefreshError(err.message);
+      console.error("Session refresh failed:", err);
       return false;
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -1427,25 +1221,6 @@ function App() {
   }, [userGroups, lastGroupRefresh]);
 
 
-  const checkTokenValidity = async () => {
-    if (!userTokens?.access_token) {
-      cleanAndSignOut();
-      return false;
-    }
-
-    try {
-      const command = new GetUserCommand({
-        AccessToken: userTokens.access_token
-      });
-      
-      await cognitoClient.send(command);
-      return true;
-    } catch (error) {
-      console.error("Token validation failed:", error);
-      cleanAndSignOut();
-      return false;
-    }
-  };
 
 
   if (isLoading) {

@@ -10,7 +10,7 @@ export const handler = async (event) => {
     await verifyToken(token);
 
     const userClaims = event.requestContext?.authorizer?.jwt?.claims;
-    if (!userClaims || !userClaims.sub) {
+    if (!userClaims?.sub) {
       return formatResponse(403, { message: "Forbidden - Invalid Token" });
     }
     const userId = userClaims.sub;
@@ -24,20 +24,21 @@ export const handler = async (event) => {
     let userGroups = userClaims["cognito:groups"] || [];
     if (typeof userGroups === "string") {
       try {
-        let parsedGroups = userGroups;
+        let parsedGroups;
         if (!userGroups.startsWith("[")) {
-          parsedGroups = userGroups.split(" ").filter(g => g);
+          parsedGroups = userGroups.split(" ").filter(Boolean);
         } else {
           parsedGroups = JSON.parse(userGroups.replace(/(\w+)\s(\w+)/g, '["$1", "$2"]'));
         }
         userGroups = Array.isArray(parsedGroups) ? parsedGroups : [userGroups];
-      } catch (e) {
-        userGroups = userGroups.includes(" ") ? userGroups.split(" ").filter(g => g) : [userGroups];
+      } catch {
+        // Not valid JSON: fall back to treating the claim as a space-separated list
+        userGroups = userGroups.includes(" ") ? userGroups.split(" ").filter(Boolean) : [userGroups];
       }
     }
-    userGroups = [].concat(...userGroups)
-      .map(group => (typeof group === "string" ? group.replace(/[\[\]]/g, "").trim() : group))
-      .filter(group => group);
+    userGroups = userGroups.flat()
+      .map(group => (typeof group === "string" ? group.replace(/[[\]]/g, "").trim() : group))
+      .filter(Boolean);
 
     const effectiveSubdirectory = subdirectory === "default" ? "" : subdirectory;
     const compositeKey = `${site}${effectiveSubdirectory ? `#${effectiveSubdirectory}` : ""}`;
@@ -53,7 +54,6 @@ export const handler = async (event) => {
     );
 
     let item = dynamoResponse.Item;
-    let ownerId = userId;
     let encryptedPasswordData = item?.password?.S;
 
     if (!item) {
@@ -95,7 +95,6 @@ export const handler = async (event) => {
         });
 
         if (matchingSecret) {
-          ownerId = matchingSecret.user_id.S;
           item = matchingSecret;
           const parsedPasswordData = JSON.parse(item.password.S);
           const groupEncryptedPassword = parsedPasswordData.sharedWith?.groups?.find(

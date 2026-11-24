@@ -126,7 +126,7 @@ export const handler = async (event) => {
       favorite: { BOOL: favorite ?? matchingItems[0].favorite?.BOOL ?? false },
       version: {
         N: matchingItems[0].version?.N
-          ? String(parseInt(matchingItems[0].version.N, 10) + 1)
+          ? String(Number.parseInt(matchingItems[0].version.N, 10) + 1)
           : "1",
       },
       password_id: { S: matchingItems[0].password_id?.S || site.split("#")[2] || "" },
@@ -222,7 +222,7 @@ export const handler = async (event) => {
         notes: baseDynamoItem.notes.S,
         tags: baseDynamoItem.tags.SS.filter((tag) => tag !== "NONE"),
         last_modified: lastModified,
-        version: parseInt(baseDynamoItem.version.N, 10),
+        version: Number.parseInt(baseDynamoItem.version.N, 10),
         password_id: baseDynamoItem.password_id.S,
       },
     });

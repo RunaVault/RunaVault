@@ -447,5 +447,50 @@ describe("GetSecret Handler", () => {
     expect(mockFormatResponse).toHaveBeenCalledWith(500, { message: "Secret data is incomplete in the database" });
   });
 
-});
+  describe("cognito:groups claim parsing", () => {
+    const mockUserId = "test-user-id";
+    const mockSite = "claims-site.com";
 
+    const runWithGroupsClaim = async (groupsClaim) => {
+      const event = {
+        headers: { Authorization: "Bearer valid-token" },
+        requestContext: {
+          authorizer: { jwt: { claims: { sub: mockUserId, "cognito:groups": groupsClaim } } }
+        },
+        body: JSON.stringify({ site: mockSite })
+      };
+      mockParseBody.mockReturnValue({ site: mockSite });
+      ddbMock.on(GetItemCommand).resolves({});
+      ddbMock.on(QueryCommand).resolves({ Items: [] });
+
+      await handler(event);
+
+      return ddbMock
+        .commandCalls(QueryCommand)
+        .filter(call => call.args[0].input.IndexName === "shared_with_groups-index")
+        .map(call => call.args[0].input.ExpressionAttributeValues[":group_id"].S);
+    };
+
+    test("falls back to space-separated groups when a bracketed claim is not valid JSON", async () => {
+      const queriedGroups = await runWithGroupsClaim("[Admins Editors");
+
+      expect(queriedGroups).toEqual(["Admins", "Editors"]);
+      expect(mockFormatResponse).toHaveBeenCalledWith(404, { message: "Password not found" });
+    });
+
+    test("treats a bracketed single-group claim that is not valid JSON as one group", async () => {
+      const queriedGroups = await runWithGroupsClaim("[Admins");
+
+      expect(queriedGroups).toEqual(["Admins"]);
+      expect(mockFormatResponse).toHaveBeenCalledWith(404, { message: "Password not found" });
+    });
+
+    test("ignores empty and non-string group entries", async () => {
+      const queriedGroups = await runWithGroupsClaim(["Admins", null, "", "[]"]);
+
+      expect(queriedGroups).toEqual(["Admins"]);
+      expect(mockFormatResponse).toHaveBeenCalledWith(404, { message: "Password not found" });
+    });
+  });
+
+});

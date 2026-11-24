@@ -5,14 +5,91 @@ import {
   faStar as faStarSolid, faSync, faShareAlt, faChevronLeft, faChevronRight, faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
-import { encryptPassword, decryptPassword } from "./CryptoUtils";
+import { encryptPassword, decryptPassword, generateSecurePassword } from "./CryptoUtils";
 import CreatableSelect from 'react-select/creatable';
 import Select from 'react-select';
 import "./App.css";
+import { copyToClipboard } from "./ClipboardUtils";
 import { useAppContext } from './AppContext';
 
+const parseSite = (site, subdirectory) => {
+  const parts = site.split('#');
+  const baseSite = parts[0];
+  const dir = subdirectory || (parts[1] && parts[1] !== parts[parts.length - 1] ? parts[1] : "");
+  return { baseSite, displaySubdirectory: dir };
+};
+
+// Parses stored password data and keeps the secrets visible in the current view, favorites first.
+const prepareSecrets = (allSecrets, { mode, group, userId }) => {
+  const parsedSecrets = allSecrets.map(secret => {
+    let parsedPassword;
+    if (typeof secret.password === 'string') {
+      try {
+        parsedPassword = JSON.parse(secret.password);
+      } catch (e) {
+        console.error(`Failed to parse password string for ${secret.site}:`, e);
+        parsedPassword = { encryptedPassword: secret.password, sharedWith: { users: [], groups: [] } };
+      }
+    } else if (typeof secret.password === 'object' && secret.password !== null) {
+      parsedPassword = {
+        ...secret.password,
+        sharedWith: {
+          users: secret.password.sharedWith?.users || [],
+          groups: secret.password.sharedWith?.groups || [],
+          roles: secret.password.sharedWith?.roles || {}
+        }
+      };
+    } else {
+      console.error(`Invalid password format for ${secret.site}:`, secret.password);
+      parsedPassword = { encryptedPassword: '', sharedWith: { users: [], groups: [], roles: {} } };
+    }
+
+    const shared_with = {
+      users: secret.shared_with?.users || [],
+      groups: secret.shared_with?.groups || [],
+      roles: secret.shared_with?.roles || {}
+    };
+
+    const { baseSite, displaySubdirectory } = parseSite(secret.site, secret.subdirectory);
+
+    return {
+      ...secret,
+      parsedPassword,
+      shared_with,
+      baseSite, 
+      displaySubdirectory
+    };
+  });
+
+  let filteredSecrets;
+
+  if (mode === "sharedWithMe") {
+    filteredSecrets = parsedSecrets.filter(secret => {
+      const isSharedWithUser = secret.shared_with?.users?.includes(userId);
+      const notOwnedByMe = !secret.owned_by_me;
+      return isSharedWithUser && notOwnedByMe;
+    });
+  } else if (group) {
+    filteredSecrets = parsedSecrets.filter(secret =>
+      secret.shared_with?.groups?.includes(group)
+    );
+  } else {
+    filteredSecrets = parsedSecrets.filter(secret =>
+      secret.owned_by_me
+    );
+  }
+
+  return filteredSecrets.sort((a, b) => (b.favorite || 0) - (a.favorite || 0));
+};
+
+const formatTags = (tags) => {
+  if (!tags) return "N/A";
+  if (tags.length === 1 && tags[0] === "NONE") return "";
+  return tags.join(", ");
+};
+
 function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSecretsData }) {
-  const { users, fetchUsers, secrets, fetchSecrets, updateSecrets } = useAppContext();
+  const { users, fetchUsers, fetchSecrets } = useAppContext();
   const [secretsCache, setSecretsCache] = useState({});
   const [filteredSecrets, setFilteredSecrets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +128,6 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
   const [sortField, setSortField] = useState("favorite");
   const [sortDirection, setSortDirection] = useState("desc");
   const [pendingFetch, setPendingFetch] = useState(false);
-  const [selectedNotes, setSelectedNotes] = useState(null);
 
   useEffect(() => {
     if (!idToken) {
@@ -74,13 +150,6 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       setAvailableGroups([]);
     }
   }, [idToken]);
-
-  const parseSite = (site, subdirectory) => {
-    const parts = site.split('#');
-    const baseSite = parts[0];
-    const dir = subdirectory || (parts[1] && parts[1] !== parts[parts.length - 1] ? parts[1] : "");
-    return { baseSite, displaySubdirectory: dir };
-  };
 
   const handleSearchChange = (e) => {
     setError(null);
@@ -138,68 +207,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
         }
       }
 
-      const allSecrets = data.secrets || [];
-
-      const parsedSecrets = allSecrets.map(secret => {
-        let parsedPassword;
-        if (typeof secret.password === 'string') {
-          try {
-            parsedPassword = JSON.parse(secret.password);
-          } catch (e) {
-            console.error(`Failed to parse password string for ${secret.site}:`, e);
-            parsedPassword = { encryptedPassword: secret.password, sharedWith: { users: [], groups: [] } };
-          }
-        } else if (typeof secret.password === 'object' && secret.password !== null) {
-          parsedPassword = {
-            ...secret.password,
-            sharedWith: {
-              users: secret.password.sharedWith?.users || [],
-              groups: secret.password.sharedWith?.groups || [],
-              roles: secret.password.sharedWith?.roles || {}
-            }
-          };
-        } else {
-          console.error(`Invalid password format for ${secret.site}:`, secret.password);
-          parsedPassword = { encryptedPassword: '', sharedWith: { users: [], groups: [], roles: {} } };
-        }
-
-        const shared_with = {
-          users: secret.shared_with?.users || [],
-          groups: secret.shared_with?.groups || [],
-          roles: secret.shared_with?.roles || {}
-        };
-
-        const { baseSite, displaySubdirectory } = parseSite(secret.site, secret.subdirectory);
-
-        return {
-          ...secret,
-          parsedPassword,
-          shared_with,
-          baseSite, 
-          displaySubdirectory
-        };
-      });
-
-      let filteredSecrets;
-      const userId = getUserIdFromToken(idToken);
-
-      if (mode === "sharedWithMe") {
-        filteredSecrets = parsedSecrets.filter(secret => {
-          const isSharedWithUser = secret.shared_with?.users?.includes(userId);
-          const notOwnedByMe = !secret.owned_by_me;
-          return isSharedWithUser && notOwnedByMe;
-        });
-      } else if (group) {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.shared_with?.groups?.includes(group)
-        );
-      } else {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.owned_by_me
-        );
-      }
-
-      const sortedSecrets = filteredSecrets.sort((a, b) => (b.favorite || 0) - (a.favorite || 0));
+      const sortedSecrets = prepareSecrets(data.secrets || [], { mode, group, userId: getUserIdFromToken(idToken) });
       setSecretsCache(prev => ({ ...prev, [cacheKey]: sortedSecrets }));
       setFilteredSecrets(sortedSecrets);
     } catch (err) {
@@ -267,69 +275,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     const cacheKey = mode === "sharedWithMe" ? "sharedWithMe" : group ? `group_${group}` : "mySecrets";
     
     if (secretsData && secretsCache[cacheKey] === undefined) {
-      const data = secretsData;
-      const allSecrets = data.secrets || [];
-
-      const parsedSecrets = allSecrets.map(secret => {
-        let parsedPassword;
-        if (typeof secret.password === 'string') {
-          try {
-            parsedPassword = JSON.parse(secret.password);
-          } catch (e) {
-            console.error(`Failed to parse password string for ${secret.site}:`, e);
-            parsedPassword = { encryptedPassword: secret.password, sharedWith: { users: [], groups: [] } };
-          }
-        } else if (typeof secret.password === 'object' && secret.password !== null) {
-          parsedPassword = {
-            ...secret.password,
-            sharedWith: {
-              users: secret.password.sharedWith?.users || [],
-              groups: secret.password.sharedWith?.groups || [],
-              roles: secret.password.sharedWith?.roles || {}
-            }
-          };
-        } else {
-          console.error(`Invalid password format for ${secret.site}:`, secret.password);
-          parsedPassword = { encryptedPassword: '', sharedWith: { users: [], groups: [], roles: {} } };
-        }
-
-        const shared_with = {
-          users: secret.shared_with?.users || [],
-          groups: secret.shared_with?.groups || [],
-          roles: secret.shared_with?.roles || {}
-        };
-
-        const { baseSite, displaySubdirectory } = parseSite(secret.site, secret.subdirectory);
-
-        return {
-          ...secret,
-          parsedPassword,
-          shared_with,
-          baseSite, 
-          displaySubdirectory
-        };
-      });
-
-      let filteredSecrets;
-      const userId = getUserIdFromToken(idToken);
-
-      if (mode === "sharedWithMe") {
-        filteredSecrets = parsedSecrets.filter(secret => {
-          const isSharedWithUser = secret.shared_with?.users?.includes(userId);
-          const notOwnedByMe = !secret.owned_by_me;
-          return isSharedWithUser && notOwnedByMe;
-        });
-      } else if (group) {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.shared_with?.groups?.includes(group)
-        );
-      } else {
-        filteredSecrets = parsedSecrets.filter(secret =>
-          secret.owned_by_me
-        );
-      }
-
-      const sortedSecrets = filteredSecrets.sort((a, b) => (b.favorite || 0) - (a.favorite || 0));
+      const sortedSecrets = prepareSecrets(secretsData.secrets || [], { mode, group, userId: getUserIdFromToken(idToken) });
       setSecretsCache(prev => ({ ...prev, [cacheKey]: sortedSecrets }));
       setFilteredSecrets(sortedSecrets);
       setLoading(false);
@@ -435,8 +381,8 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       filtered = filtered.filter(secret =>
         secret.baseSite.toLowerCase().includes(searchQuery.toLowerCase()) ||
         secret.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (secret.notes && secret.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (secret.tags && secret.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+        (secret.notes?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (secret.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
       );
     }
     
@@ -462,6 +408,21 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       return;
     }
 
+    const { encryptedData, encryptionContext } = getDecryptionInput(secret);
+
+    if (!encryptedData) {
+      setError("No encrypted password available for this context");
+      return;
+    }
+
+    const password = await decryptPassword(encryptedData, idToken, encryptionContext);
+    if (password) {
+      setVisiblePasswords(prev => ({ ...prev, [secretId]: password }));
+    }
+  };
+
+  // Owners decrypt the main ciphertext; recipients use the copy encrypted for their group or user.
+  const getDecryptionInput = (secret) => {
     let encryptedData = secret.parsedPassword.encryptedPassword;
     let encryptionContext = { purpose: "password-manager" };
     const userId = getUserIdFromToken(idToken);
@@ -483,14 +444,14 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
       }
     }
 
-    if (!encryptedData) {
-      setError("No encrypted password available for this context");
-      return;
-    }
+    return { encryptedData, encryptionContext };
+  };
 
-    const password = await decryptPassword(encryptedData, idToken, encryptionContext);
-    if (password) {
-      setVisiblePasswords(prev => ({ ...prev, [secretId]: password }));
+  const handleActivationKey = (handler) => (e) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handler(e);
     }
   };
 
@@ -506,26 +467,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     } else if (field === "username") {
       textToCopy = secret.username;
     } else {
-      let encryptedData = secret.parsedPassword.encryptedPassword;
-      let encryptionContext = { purpose: "password-manager" };
-      const userId = getUserIdFromToken(idToken);
-      const isOwner = secret.user_id === userId;
-
-      if (!isOwner) {
-        if (group && secret.parsedPassword.sharedWith?.groups?.length > 0) {
-          const groupMatch = secret.parsedPassword.sharedWith.groups.find(g => g.groupId === group);
-          if (groupMatch) {
-            encryptedData = groupMatch.encryptedPassword;
-            encryptionContext = { groupId: group, purpose: "password-manager" };
-          }
-        } else if (secret.parsedPassword.sharedWith?.users?.length > 0) {
-          const userMatch = secret.parsedPassword.sharedWith.users.find(u => u.userId === userId);
-          if (userMatch) {
-            encryptedData = userMatch.encryptedPassword;
-            encryptionContext = { userId: userId, purpose: "password-manager" };
-          }
-        }
-      }
+      const { encryptedData, encryptionContext } = getDecryptionInput(secret);
 
       if (!encryptedData) {
         setError("No encrypted password available for this context");
@@ -544,22 +486,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     if (!textToCopy) return;
 
     try {
-      const textarea = document.createElement('textarea');
-      textarea.value = textToCopy;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = 0;
-      document.body.appendChild(textarea);
-      
-      textarea.select();
-      
-      try {
-        await navigator.clipboard.writeText(textToCopy);
-      } catch (err) {
-        document.execCommand('copy');
-      }
-      
-      document.body.removeChild(textarea);
-      
+      await copyToClipboard(textToCopy);
       setCopyNotification({ field, site: secretId });
       setTimeout(() => setCopyNotification(null), 2500);
     } catch (err) {
@@ -937,12 +864,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
   };
 
   const generateRandomPassword = () => {
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    for (let i = 0; i < 16; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    setEditPassword(password);
+    setEditPassword(generateSecurePassword());
   };
 
   const handleShareDirectory = (dir) => {
@@ -1162,9 +1084,9 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
     const lowercasedQuery = query.toLowerCase().trim();
     const filtered = availableUsers.filter(user =>
       user.label.toLowerCase().includes(lowercasedQuery) ||
-      (user.email && user.email.toLowerCase().includes(lowercasedQuery)) ||
-      (user.given_name && user.given_name.toLowerCase().includes(lowercasedQuery)) ||
-      (user.family_name && user.family_name.toLowerCase().includes(lowercasedQuery))
+      user.email?.toLowerCase().includes(lowercasedQuery) ||
+      user.given_name?.toLowerCase().includes(lowercasedQuery) ||
+      user.family_name?.toLowerCase().includes(lowercasedQuery)
     );
     setFilteredAvailableUsers(filtered);
   }, [availableUsers]);
@@ -1179,6 +1101,139 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
   useEffect(() => {
     setFilteredAvailableUsers(availableUsers);
   }, [availableUsers]);
+
+  const renderSecretRow = (secret) => {
+    const userId = getUserIdFromToken(idToken);
+    const isOwner = secret.user_id === userId;
+    const userRole = group ? secret.shared_with.roles?.[group] || "viewer" : "owner";
+
+    return (
+      <tr key={`${secret.user_id}-${secret.site}-${secret.displaySubdirectory}`}>
+        {mode !== "sharedWithMe" && !group && (
+          <td className="fav-column">
+            <button
+              className="btn favorite-button"
+              onClick={(e) => toggleFavorite(secret, e)}
+            >
+              <FontAwesomeIcon icon={secret.favorite ? faStarSolid : faStarRegular} />
+            </button>
+          </td>
+        )}
+        <td                            
+          className="clickable-cell"                            
+        >
+          <div className="cell-content position-relative"
+          onClick={(e) => handleCopy("site", secret, e)}
+          onKeyDown={handleActivationKey((e) => handleCopy("site", secret, e))}
+          role="button"
+          tabIndex={0}
+          title={`${secret.baseSite}\nClick to copy`}
+          >
+            {secret.baseSite.replace(/^https?:\/\//, '')}
+          </div>
+          {copyNotification?.field === "site" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
+            <span className="item-copy-notification">Copied!</span>
+          )}
+          {secret.notes && (
+              <div className="notes-tooltip-container"
+              onMouseEnter={(e) => {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'notes-tooltip';
+                    tooltip.textContent = secret.notes;
+                    e.currentTarget.appendChild(tooltip);
+                  }}
+                  onMouseLeave={(e) => {
+                    const tooltip = e.currentTarget.querySelector('.notes-tooltip');
+                    if (tooltip) {
+                      tooltip.remove();
+                    }
+                  }}>
+                <FontAwesomeIcon 
+                  icon={faInfoCircle} 
+                  className="notes-icon"
+
+                />
+              </div>                             
+            )}
+        </td>
+        <td
+          onClick={(e) => handleCopy("username", secret, e)}
+          onKeyDown={handleActivationKey((e) => handleCopy("username", secret, e))}
+          tabIndex={0}
+          className="clickable-cell"
+          title={`${secret.username}\nClick to copy`}
+        >
+          <div className="cell-content position-relative">
+            {secret.username}
+          </div>
+          {copyNotification?.field === "username" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
+            <span className="item-copy-notification">Copied!</span>
+          )}
+        </td>
+        <td>
+          <div
+            className="password-container position-relative clickable-cell"
+            onClick={(e) => handleCopy("password", secret, e)}
+            onKeyDown={handleActivationKey((e) => handleCopy("password", secret, e))}
+            role="button"
+            tabIndex={0}
+            title="Click to copy"
+          >
+            {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
+              <span className="password-text">{visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`]}</span>
+            ) : (
+              <span className="spoiler">••••••••</span>
+            )}
+          </div>
+          {copyNotification?.field === "password" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
+            <span className="item-copy-notification">Copied!</span>
+          )}
+        </td>
+        <td>
+          <div className="cell-content">
+            {formatTags(secret.tags)}
+          </div>
+        </td>
+        {(group || mode === "sharedWithMe") && (
+          <td>
+            <div className="cell-content">
+              {isOwner ? "You" :
+                availableUsers.find(user => user.value === secret.user_id)?.label || secret.user_id}
+            </div>
+          </td>
+        )}
+        <td className="last-modified-column">{formatDate(secret.last_modified)}</td>
+        <td className="actions-column">
+          <div className="d-flex gap-2 justify-content-center">
+            <button
+              className="btn view-button"
+              onClick={(e) => handleViewPassword(secret, e)}
+            >
+              <FontAwesomeIcon icon={visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? faEyeSlash : faEye} />
+            </button>
+            {(isOwner || userRole === "editor") && (
+              <>
+                <button
+                  className="btn edit-button"
+                  onClick={(e) => handleEdit(secret, e)}
+                >
+                  <FontAwesomeIcon icon={faEdit} />
+                </button>
+                {isOwner && (
+                  <button
+                    className="btn delete-button"
+                    onClick={(e) => handleDelete(secret, e)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="secrets-section">
@@ -1195,7 +1250,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
         <input
           type="text"
           value={searchQuery}
-          autocomplete="off"
+          autoComplete="off"
           onChange={handleSearchChange}
           placeholder="Search by site, username, tags or notes..."
           className="form-control search-input"
@@ -1239,130 +1294,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedDefaultSecrets.map((secret) => {
-                      const userId = getUserIdFromToken(idToken);
-                      const isOwner = secret.user_id === userId;
-                      const userRole = group ? secret.shared_with.roles?.[group] || "viewer" : "owner";
-
-                      return (
-                        <tr key={`${secret.user_id}-${secret.site}-${secret.displaySubdirectory}`}>
-                          {mode !== "sharedWithMe" && !group && (
-                            <td className="fav-column">
-                              <button
-                                className="btn favorite-button"
-                                onClick={(e) => toggleFavorite(secret, e)}
-                              >
-                                <FontAwesomeIcon icon={secret.favorite ? faStarSolid : faStarRegular} />
-                              </button>
-                            </td>
-                          )}
-                          <td                            
-                            className="clickable-cell"                            
-                          >
-                            <div className="cell-content position-relative"
-                            onClick={(e) => handleCopy("site", secret, e)}
-                            title={`${secret.baseSite}\nClick to copy`}
-                            >
-                              {secret.baseSite.replace(/^https?:\/\//, '')}
-                            </div>
-                            {copyNotification?.field === "site" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                              <span className="item-copy-notification">Copied!</span>
-                            )}
-                            {secret.notes && (
-                                <div className="notes-tooltip-container"
-                                onMouseEnter={(e) => {
-                                      const tooltip = document.createElement('div');
-                                      tooltip.className = 'notes-tooltip';
-                                      tooltip.textContent = secret.notes;
-                                      e.currentTarget.appendChild(tooltip);
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      const tooltip = e.currentTarget.querySelector('.notes-tooltip');
-                                      if (tooltip) {
-                                        tooltip.remove();
-                                      }
-                                    }}>
-                                  <FontAwesomeIcon 
-                                    icon={faInfoCircle} 
-                                    className="notes-icon"
-                                    
-                                  />
-                                </div>                             
-                              )}
-                          </td>
-                          <td
-                            onClick={(e) => handleCopy("username", secret, e)}
-                            className="clickable-cell"
-                            title={`${secret.username}\nClick to copy`}
-                          >
-                            <div className="cell-content position-relative">
-                              {secret.username}
-                            </div>
-                            {copyNotification?.field === "username" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                              <span className="item-copy-notification">Copied!</span>
-                            )}
-                          </td>
-                          <td>
-                            <div
-                              className="password-container position-relative clickable-cell"
-                              onClick={(e) => handleCopy("password", secret, e)}
-                              title="Click to copy"
-                            >
-                              {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
-                                <span className="password-text">{visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`]}</span>
-                              ) : (
-                                <span className="spoiler">••••••••</span>
-                              )}
-                            </div>
-                            {copyNotification?.field === "password" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                              <span className="item-copy-notification">Copied!</span>
-                            )}
-                          </td>
-                          <td>
-                            <div className="cell-content">
-                              {secret.tags && secret.tags.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
-                            </div>
-                          </td>
-                          {(group || mode === "sharedWithMe") && (
-                            <td>
-                              <div className="cell-content">
-                                {isOwner ? "You" :
-                                  availableUsers.find(user => user.value === secret.user_id)?.label || secret.user_id}
-                              </div>
-                            </td>
-                          )}
-                          <td className="last-modified-column">{formatDate(secret.last_modified)}</td>
-                          <td className="actions-column">
-                            <div className="d-flex gap-2 justify-content-center">
-                              <button
-                                className="btn view-button"
-                                onClick={(e) => handleViewPassword(secret, e)}
-                              >
-                                <FontAwesomeIcon icon={visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? faEyeSlash : faEye} />
-                              </button>
-                              {(isOwner || userRole === "editor") && (
-                                <>
-                                  <button
-                                    className="btn edit-button"
-                                    onClick={(e) => handleEdit(secret, e)}
-                                  >
-                                    <FontAwesomeIcon icon={faEdit} />
-                                  </button>
-                                  {isOwner && (
-                                    <button
-                                      className="btn delete-button"
-                                      onClick={(e) => handleDelete(secret, e)}
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} />
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {paginatedDefaultSecrets.map((secret) => renderSecretRow(secret))}
                   </tbody>
                 </table>
               </div>
@@ -1387,7 +1319,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
 
             return (
               <div key={dir} className="directory mb-3">
-                <div className="directory-header p-2 d-flex justify-content-between align-items-center" onClick={() => toggleDirectory(dir)}>
+                <div className="directory-header p-2 d-flex justify-content-between align-items-center" onClick={() => toggleDirectory(dir)} onKeyDown={handleActivationKey(() => toggleDirectory(dir))} role="button" tabIndex={0} aria-expanded={!!expandedDirs[dir]}>
                   <div className="d-flex align-items-center">
                     <FontAwesomeIcon
                       icon={expandedDirs[dir] ? faFolderOpen : faFolder}
@@ -1431,121 +1363,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                           </tr>
                         </thead>
                         <tbody>
-                          {dirPaginationInfo.currentItems.map(secret => {
-                            const userId = getUserIdFromToken(idToken);
-                            const isOwner = secret.user_id === userId;
-                            const userRole = group ? secret.shared_with.roles?.[group] || "viewer" : "owner";
-
-                            return (
-                              <tr key={`${secret.user_id}-${secret.site}-${secret.displaySubdirectory}`}>
-                                {mode !== "sharedWithMe" && !group && (
-                                  <td className="fav-column">
-                                    <button
-                                      className="btn favorite-button"
-                                      onClick={(e) => toggleFavorite(secret, e)}
-                                    >
-                                      <FontAwesomeIcon icon={secret.favorite ? faStarSolid : faStarRegular} />
-                                    </button>
-                                  </td>
-                                )}
-                                <td                                  
-                                  className="clickable-cell"                                  
-                                >
-                                  <div className="cell-content position-relative"
-                                  onClick={(e) => handleCopy("site", secret, e)}
-                                  title={`${secret.baseSite}\nClick to copy`}
-                                  >
-                                    {secret.baseSite.replace(/^https?:\/\//, '')}
-                                  </div>
-                                  {copyNotification?.field === "site" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                                    <span className="item-copy-notification">Copied!</span>
-                                  )}
-                                  {secret.notes && (
-                                <div className="notes-tooltip-container"
-                                onMouseEnter={(e) => {
-                                      const tooltip = document.createElement('div');
-                                      tooltip.className = 'notes-tooltip';
-                                      tooltip.textContent = secret.notes;
-                                      e.currentTarget.appendChild(tooltip);
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      const tooltip = e.currentTarget.querySelector('.notes-tooltip');
-                                      if (tooltip) {
-                                        tooltip.remove();
-                                      }
-                                    }}>
-                                  <FontAwesomeIcon 
-                                    icon={faInfoCircle} 
-                                    className="notes-icon"
-                                    
-                                  />
-                                </div>                             
-                              )}
-                                </td>
-                                <td
-                                  onClick={(e) => handleCopy("username", secret, e)}
-                                  className="clickable-cell"
-                                  title={`${secret.username}\nClick to copy`}
-                                >
-                                  <div className="cell-content position-relative">
-                                    {secret.username}
-                                  </div>
-                                  {copyNotification?.field === "username" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                                    <span className="item-copy-notification">Copied!</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div
-                                    className="password-container position-relative clickable-cell"
-                                    onClick={(e) => handleCopy("password", secret, e)}
-                                    title="Click to copy"
-                                  >
-                                    {visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? (
-                                      <span className="password-text">{visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`]}</span>
-                                    ) : (
-                                      <span className="spoiler">••••••••</span>
-                                    )}
-                                  </div>
-                                  {copyNotification?.field === "password" && copyNotification?.site === `${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}` && (
-                                    <span className="item-copy-notification">Copied!</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div className="cell-content">
-                                    {secret.tags && secret.tags.length === 1 && secret.tags[0] === "NONE" ? "" : (secret.tags ? secret.tags.join(", ") : "N/A")}
-                                  </div>
-                                </td>
-                                {(group || mode === "sharedWithMe") && (
-                                  <td>
-                                    <div className="cell-content">
-                                      {isOwner ? "You" :
-                                        availableUsers.find(user => user.value === secret.user_id)?.label || secret.user_id}
-                                    </div>
-                                  </td>
-                                )}
-                                <td className="last-modified-column">{formatDate(secret.last_modified)}</td>
-                                <td className="actions-column">
-                                  <div className="d-flex gap-2 justify-content-center">
-                                    <button className="btn view-button" onClick={(e) => handleViewPassword(secret, e)}>
-                                      <FontAwesomeIcon icon={visiblePasswords[`${secret.user_id}-${secret.site}-${secret.displaySubdirectory || ''}`] ? faEyeSlash : faEye} />
-                                    </button>
-                                    {(isOwner || userRole === "editor") && (
-                                      <>
-                                        <button className="btn edit-button" onClick={(e) => handleEdit(secret, e)}>
-                                          <FontAwesomeIcon icon={faEdit} />
-                                        </button>
-                                        {isOwner && (
-                                          <button className="btn delete-button" onClick={(e) => handleDelete(secret, e)}>
-                                            <FontAwesomeIcon icon={faTrash} />
-                                          </button>
-                                        )}
-                                      </>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          {dirPaginationInfo.currentItems.map((secret) => renderSecretRow(secret))}
                         </tbody>
                       </table>
                     </div>
@@ -1630,7 +1448,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
                   type={showPassword ? "text" : "password"}
                   id="edit-password"
                   value={editPassword}
-                  autocomplete="new-password"
+                  autoComplete="new-password"
                   onChange={(e) => setEditPassword(e.target.value)}
                   placeholder="Enter new password"
                   className="form-control"
@@ -1736,7 +1554,7 @@ function SecretsTab({ accessToken, idToken, group, mode, secretsData, onUpdateSe
               <label htmlFor="edit-subdirectory" className="form-label">Subdirectory (optional):</label>
               <input
                 type="text"
-                maxlength="50"
+                maxLength="50"
                 id="edit-subdirectory"
                 value={editSubdirectory === "default" ? "" : editSubdirectory}
                 onChange={(e) => setEditSubdirectory(e.target.value)}

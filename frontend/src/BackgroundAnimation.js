@@ -169,9 +169,6 @@ const initBackgroundAnimation = () => {
                     
                     if (Math.random() > 0.7 && !(particles[i].isLockedNode && particles[j].isLockedNode)) {
                         const segments = Math.floor(Math.random() * 2) + 1;
-                        let lastX = particles[i].x;
-                        let lastY = particles[i].y;
-                        
                         for (let s = 0; s < segments; s++) {
                             const ratio = (s + 1) / (segments + 1);
                             const midX = particles[i].x + (particles[j].x - particles[i].x) * ratio;

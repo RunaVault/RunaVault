@@ -63,7 +63,7 @@ export const handler = async (event) => {
 
       if (!passwordId) {
         if (parts.length >= 3) {
-          passwordId = parts[parts.length - 2];
+          passwordId = parts.at(-2);
         }
       }
 
@@ -87,7 +87,6 @@ export const handler = async (event) => {
       console.log('Processing site:', site.split('#')[0]);
       const siteParts = site.split('#');
 
-      const lastPart = siteParts[siteParts.length - 1];
       let baseCompositeKey;
 
       if (siteParts.length >= 3) {
@@ -143,7 +142,7 @@ export const handler = async (event) => {
         encrypted: { BOOL: baseItem.encrypted?.BOOL ?? true },
         shared_with_roles: {
           M: {
-            ...((baseItem.shared_with_roles?.M || {})),
+            ...baseItem.shared_with_roles?.M,
             ...(Object.fromEntries(Object.entries(validatedSharedWith.roles || {}).map(([k, v]) => [k, { S: v }])))
           }
         },
@@ -152,7 +151,7 @@ export const handler = async (event) => {
         notes: { S: baseItem.notes?.S ?? "" },
         tags: { SS: baseItem.tags?.SS || ["NONE"] },
         favorite: { BOOL: baseItem.favorite?.BOOL ?? false },
-        version: { N: (parseInt(baseItem.version?.N || "1") + 1).toString() },
+        version: { N: (Number.parseInt(baseItem.version?.N || "1", 10) + 1).toString() },
         password_id: { S: passwordId },
       };
 
@@ -160,46 +159,41 @@ export const handler = async (event) => {
       const users = updatedSharedUsers.length > 0 ? updatedSharedUsers : ["NONE"];
       const putPromises = [];
 
+      // New share items must not overwrite an existing record; known items are replaced.
+      const putShareItem = (compositeKey, sharedWithGroup, sharedWithUser, kind) => {
+        const putCommand = new PutItemCommand({
+          TableName: `${TABLE_PREFIX}passwords`,
+          Item: {
+            ...baseDynamoItem,
+            site: { S: compositeKey },
+            shared_with_groups: { S: sharedWithGroup },
+            shared_with_users: { S: sharedWithUser },
+          },
+          ...(existingItemIds.has(compositeKey) ? {} : {
+            ConditionExpression: "attribute_not_exists(user_id) AND attribute_not_exists(site)"
+          }),
+        });
+
+        return dynamoDB.send(putCommand)
+          .then(() => {
+            console.log(`Successfully created/updated ${kind} item for site:`, baseCompositeKey.split('#')[0]);
+          }).catch(err => {
+            if (err.name === "ConditionalCheckFailedException") {
+              console.log("Record already exists, skipping for site:", baseCompositeKey.split('#')[0]);
+              return;
+            }
+            console.error(`Error creating ${kind} item for site:`, baseCompositeKey.split('#')[0], err.message);
+            throw err;
+          });
+      };
+
       groups.forEach((group) => {
         if (group === "NONE" && groups.length > 1) return;
 
         const compositeKey = `${baseCompositeKey}#group:${group}`;
         console.log('Creating group item for site:', baseCompositeKey.split('#')[0], 'group:', group);
 
-        const putCommand = existingItemIds.has(compositeKey) ?
-          new PutItemCommand({
-            TableName: `${TABLE_PREFIX}passwords`,
-            Item: {
-              ...baseDynamoItem,
-              site: { S: compositeKey },
-              shared_with_groups: { S: group },
-              shared_with_users: { S: "NONE" },
-            }
-          }) :
-          new PutItemCommand({
-            TableName: `${TABLE_PREFIX}passwords`,
-            Item: {
-              ...baseDynamoItem,
-              site: { S: compositeKey },
-              shared_with_groups: { S: group },
-              shared_with_users: { S: "NONE" },
-            },
-            ConditionExpression: "attribute_not_exists(user_id) AND attribute_not_exists(site)"
-          });
-
-        putPromises.push(
-          dynamoDB.send(putCommand)
-            .then(() => {
-              console.log('Successfully created/updated group item for site:', baseCompositeKey.split('#')[0]);
-            }).catch(err => {
-              if (err.name === "ConditionalCheckFailedException") {
-                console.log("Record already exists, skipping for site:", baseCompositeKey.split('#')[0]);
-                return;
-              }
-              console.error('Error creating group item for site:', baseCompositeKey.split('#')[0], err.message);
-              throw err;
-            })
-        );
+        putPromises.push(putShareItem(compositeKey, group, "NONE", "group"));
       });
 
       users.forEach((user) => {
@@ -208,40 +202,7 @@ export const handler = async (event) => {
         const compositeKey = `${baseCompositeKey}#user:${user}`;
         console.log('Creating user item for site:', baseCompositeKey.split('#')[0], 'user:', user);
 
-        const putCommand = existingItemIds.has(compositeKey) ?
-          new PutItemCommand({
-            TableName: `${TABLE_PREFIX}passwords`,
-            Item: {
-              ...baseDynamoItem,
-              site: { S: compositeKey },
-              shared_with_groups: { S: "NONE" },
-              shared_with_users: { S: user },
-            }
-          }) :
-          new PutItemCommand({
-            TableName: `${TABLE_PREFIX}passwords`,
-            Item: {
-              ...baseDynamoItem,
-              site: { S: compositeKey },
-              shared_with_groups: { S: "NONE" },
-              shared_with_users: { S: user },
-            },
-            ConditionExpression: "attribute_not_exists(user_id) AND attribute_not_exists(site)"
-          });
-
-        putPromises.push(
-          dynamoDB.send(putCommand)
-            .then(() => {
-              console.log('Successfully created/updated user item for site:', baseCompositeKey.split('#')[0]);
-            }).catch(err => {
-              if (err.name === "ConditionalCheckFailedException") {
-                console.log("Record already exists, skipping for site:", baseCompositeKey.split('#')[0]);
-                return;
-              }
-              console.error('Error creating user item for site:', baseCompositeKey.split('#')[0], err.message);
-              throw err;
-            })
-        );
+        putPromises.push(putShareItem(compositeKey, "NONE", user, "user"));
       });
 
       try {
@@ -267,7 +228,7 @@ export const handler = async (event) => {
         notes: baseDynamoItem.notes.S,
         tags: baseDynamoItem.tags.SS.filter(tag => tag !== "NONE"),
         last_modified: lastModified,
-        version: parseInt(baseDynamoItem.version.N)
+        version: Number.parseInt(baseDynamoItem.version.N, 10)
       });
     }
 
